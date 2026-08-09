@@ -43,6 +43,7 @@ public struct NotificationPreferences: Hashable, Sendable, Codable {
     public func allows(kind: TransitionEventKind) -> Bool {
         guard masterEnabled else { return false }
         switch kind {
+        case .newPullRequestAuthoredByMe: return true
         case .ciChanged: return ciEnabled
         case .mergeChanged: return mergeEnabled
         case .closedOrMerged: return closedOrMergedEnabled

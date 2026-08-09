@@ -87,6 +87,36 @@ public struct TransitionDetector: TransitionDetecting, Sendable {
         return emitted
     }
 
+    /// Detects authored PRs that first appear after a baseline has been established.
+    /// This is separate from status transitions so authored-PR discovery can run
+    /// independently of the dashboard's visible filters.
+    public func detectNewAuthoredPullRequests(
+        previouslyObserved: [GitHubNodeID: PullRequestSummary],
+        current: [PullRequestSummary],
+        authenticatedLogin: String,
+        baselineMode: Bool,
+        observedAt: Date
+    ) -> [TransitionEvent] {
+        guard !baselineMode else { return [] }
+        let login = authenticatedLogin.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !login.isEmpty else { return [] }
+
+        return current.compactMap { pullRequest in
+            guard previouslyObserved[pullRequest.id] == nil else { return nil }
+            guard pullRequest.authorLogin.caseInsensitiveCompare(login) == .orderedSame else { return nil }
+            return TransitionEvent(
+                pullRequestID: pullRequest.id,
+                repositoryNameWithOwner: pullRequest.repositoryNameWithOwner,
+                number: pullRequest.number,
+                title: pullRequest.title,
+                kind: .newPullRequestAuthoredByMe,
+                oldValue: "",
+                newValue: PullRequestLifecycleState.open.rawValue,
+                observedAt: observedAt
+            )
+        }
+    }
+
     private func shouldEmitClosedOrMerged(
         previous: PullRequestLifecycleState,
         current: PullRequestLifecycleState

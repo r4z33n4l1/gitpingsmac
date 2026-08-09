@@ -33,6 +33,7 @@ GitPings should answer three questions at a glance:
 - Keep pinned status available from a persistent menu-bar icon.
 - Poll once per minute while the app is running.
 - Detect genuine state transitions without notifying on the initial sync.
+- Notify when a newly observed PR in a selected repository is authored by the signed-in user.
 - Show configurable notch and macOS notifications for tracked transitions.
 - Keep the dashboard closable while the menu-bar process continues running.
 - Support launch at login.
@@ -189,6 +190,7 @@ CI and merge state must remain separate. “CI passing” does not imply “merg
 - CHANGE-1: Each successful refresh is compared with a persisted last-known snapshot.
 - CHANGE-2: The first successful sync, newly selected repository, and newly enabled filter establish baselines without generating historical notifications.
 - CHANGE-3: A transition includes:
+  - A newly observed open PR authored by the signed-in user
   - CI state changed
   - Merge state changed
   - A tracked PR became closed or merged
@@ -202,7 +204,8 @@ CI and merge state must remain separate. “CI passing” does not imply “merg
 
 - NOTIFY-1: Every tracked transition type is enabled by default during MVP testing.
 - NOTIFY-2: Settings provide a master notification toggle.
-- NOTIFY-3: Settings provide per-event toggles for CI, mergeability, and closed/merged transitions.
+- NOTIFY-3: Settings provide per-event toggles for newly authored PRs, CI, mergeability, and closed/merged transitions.
+- NOTIFY-3A: Newly authored PR discovery covers all selected repositories independently of the dashboard's visible PR filters and establishes a silent baseline when first enabled.
 - NOTIFY-4: Settings provide independent delivery-channel toggles for notch UI, sound, and macOS Notification Center.
 - NOTIFY-5: The notch notification is enabled by default; system notifications and sound may be changed by the user.
 - NOTIFY-6: The app requests macOS notification permission in context, when the user enables the system channel, not automatically at launch.

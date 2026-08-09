@@ -4,19 +4,6 @@ import SwiftUI
 struct SettingsRootView: View {
     @Bindable var model: AppModel
 
-    // Local spike preferences — not yet persisted via PreferencesStore / AppModel (integrator wiring).
-    @State private var notificationsMasterEnabled = true
-    @State private var notifyCI = true
-    @State private var notifyMergeability = true
-    @State private var notifyClosedOrMerged = true
-    @State private var channelNotch = true
-    @State private var channelSound = false
-    @State private var channelSystem = false
-    @State private var fallbackPillEnabled = true
-    @State private var suppressFullScreen = true
-    @State private var launchAtLogin = false
-    @State private var systemPermissionNote = "Permission is requested only when System Notifications is turned on."
-
     var body: some View {
         TabView {
             accountTab
@@ -24,133 +11,133 @@ struct SettingsRootView: View {
             notificationsTab
             refreshTab
             appearanceTab
-            generalTab
         }
-        .frame(width: 520, height: 420)
+        .frame(width: 540, height: 430)
+        .padding(.top, 8)
     }
 
     private var accountTab: some View {
         Form {
-            Section("Account") {
+            Section("GitHub account") {
                 switch model.authState {
                 case .signedOut:
-                    Text("Signed out")
-                case .deviceFlowPending(let userCode, _):
-                    Text("Device flow pending")
-                    Text("User code: \(userCode)")
+                    LabeledContent("Status", value: "Signed out")
+                    Button("Sign in with GitHub") { model.beginSignIn() }
+                        .buttonStyle(.borderedProminent)
+                case .deviceFlowPending(let userCode, let url):
+                    LabeledContent("Code") {
+                        Text(userCode).font(.system(.body, design: .monospaced, weight: .bold))
+                            .textSelection(.enabled)
+                    }
+                    Link("Open GitHub Device Login", destination: url)
+                    Button("Cancel", role: .cancel) { model.cancelSignIn() }
                 case .signedIn(let account):
-                    Text("Signed in as \(account.login)")
+                    LabeledContent("Signed in as", value: "@\(account.login)")
+                    Button("Sign Out", role: .destructive) { model.signOut() }
                 case .needsReauthorization(let reason):
-                    Text("Reauthorize required: \(reason)")
+                    Text(reason).foregroundStyle(.red)
+                    Button("Sign in again") { model.beginSignIn() }
                 }
             }
+
+            Section("OAuth configuration") {
+                TextField("GitHub OAuth client ID", text: $model.oauthClientID)
+                    .textFieldStyle(.roundedBorder)
+                Text("GitPings uses GitHub device flow directly. The client ID is public; no client secret, callback server, or hosted database is required.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Link(
+                    "GitHub App setup guide",
+                    destination: URL(string: "https://github.com/r4z33n4l1/gitpingsmac/blob/main/docs/DISTRIBUTION.md#2-create-a-personal-github-app")!
+                )
+            }
         }
+        .formStyle(.grouped)
         .tabItem { Label("Account", systemImage: "person.crop.circle") }
     }
 
     private var filtersTab: some View {
         Form {
-            Section("PR Filters") {
+            Section("Which open PRs should appear?") {
                 Toggle("All open PRs", isOn: $model.filters.includeAllOpen)
                 Toggle("Authored by me", isOn: $model.filters.includeAuthoredByMe)
+                    .disabled(model.filters.includeAllOpen)
                 Toggle("Assigned to me", isOn: $model.filters.includeAssignedToMe)
+                    .disabled(model.filters.includeAllOpen)
                 Toggle("Review requested from me", isOn: $model.filters.includeReviewRequestedFromMe)
+                    .disabled(model.filters.includeAllOpen)
             }
+            Text("Enabled filters use OR semantics. Changes establish a fresh baseline so old state is never reported as a new alert.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
+        .formStyle(.grouped)
+        .onChange(of: model.filters) { _, _ in model.filtersChanged() }
         .tabItem { Label("PR Filters", systemImage: "line.3.horizontal.decrease.circle") }
     }
 
     private var notificationsTab: some View {
         Form {
-            Section("Master") {
-                Toggle("Enable notifications", isOn: $notificationsMasterEnabled)
+            Section("Notifications") {
+                Toggle("Enable status-change notifications", isOn: $model.notificationsEnabled)
+                Toggle(
+                    "New PRs authored by me",
+                    isOn: $model.newAuthoredPullRequestNotificationsEnabled
+                )
+                .disabled(!model.notificationsEnabled)
+                Toggle("Show around the notch", isOn: $model.notchNotificationsEnabled)
+                    .disabled(!model.notificationsEnabled)
+                Toggle("System notifications", isOn: $model.systemNotificationsEnabled)
+                    .disabled(!model.notificationsEnabled)
+                Toggle("Play a sound", isOn: $model.soundEnabled)
+                    .disabled(!model.notificationsEnabled)
             }
-            Section("Events") {
-                Toggle("CI transitions", isOn: $notifyCI)
-                    .disabled(!notificationsMasterEnabled)
-                Toggle("Mergeability transitions", isOn: $notifyMergeability)
-                    .disabled(!notificationsMasterEnabled)
-                Toggle("Closed / merged", isOn: $notifyClosedOrMerged)
-                    .disabled(!notificationsMasterEnabled)
-            }
-            Section("Delivery channels") {
-                Toggle("Notch UI", isOn: $channelNotch)
-                    .disabled(!notificationsMasterEnabled)
-                Toggle("Sound", isOn: $channelSound)
-                    .disabled(!notificationsMasterEnabled)
-                Toggle("System Notifications", isOn: $channelSystem)
-                    .disabled(!notificationsMasterEnabled)
-                    .onChange(of: channelSystem) { _, enabled in
-                        if enabled {
-                            systemPermissionNote =
-                                "In-context permission request will run via SystemNotificationPresenter (NOTIFY-6)."
-                        } else {
-                            systemPermissionNote =
-                                "Permission is requested only when System Notifications is turned on."
-                        }
-                    }
-                Text(systemPermissionNote)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            Text("New-PR alerts watch authored pull requests across selected repositories, even when the dashboard's Authored by me filter is off. Existing PRs establish a silent baseline.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             Section("Test") {
-                Button("Send test notification…") {}
-                    .disabled(true)
-                Text("Wired after NotificationRouting lands (NOTIFY-9).")
+                Button("Send Test Notification") { model.sendTestNotification() }
+                    .disabled(!model.notificationsEnabled)
+                Text("Tests never enter PR history or change the menu-bar status.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
+        .formStyle(.grouped)
         .tabItem { Label("Notifications", systemImage: "bell") }
     }
 
     private var refreshTab: some View {
         Form {
-            Section("Refresh") {
-                LabeledContent("Target interval", value: "60 seconds")
-                LabeledContent(
-                    "Last success",
-                    value: model.lastSuccessfulRefreshAt?.formatted() ?? "Never"
-                )
+            Section("Polling") {
+                LabeledContent("Interval", value: "Every 60 seconds")
+                LabeledContent("Last successful refresh") {
+                    Text(model.lastSuccessfulRefreshAt?.formatted() ?? "Never")
+                }
+                Button("Refresh Now") { model.refresh() }
+                    .disabled(model.isRefreshing || model.signedInAccount == nil)
             }
+            Text("GitPings also refreshes when repository selection or PR filters change.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
+        .formStyle(.grouped)
         .tabItem { Label("Refresh", systemImage: "arrow.clockwise") }
     }
 
     private var appearanceTab: some View {
         Form {
-            Section("Notch") {
-                Toggle("Notch notifications", isOn: $channelNotch)
-                Toggle("Fallback pill on notchless displays", isOn: $fallbackPillEnabled)
-                Toggle("Suppress over full-screen apps", isOn: $suppressFullScreen)
-            }
-            Section("Accessibility") {
+            Section("Notch behavior") {
+                LabeledContent("Display mode", value: "Notch-attached with fallback pill")
                 LabeledContent("Reduce Motion") {
-                    Text(reduceMotionStatus)
-                        .foregroundStyle(.secondary)
+                    Text(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? "On" : "Off")
                 }
-                Text("When Reduce Motion is on, the panel fades instead of expanding.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
+            Text("On Macs without a camera housing, the same notification appears as a compact centered pill below the menu bar.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
+        .formStyle(.grouped)
         .tabItem { Label("Appearance", systemImage: "paintbrush") }
-    }
-
-    private var generalTab: some View {
-        Form {
-            Section("General") {
-                Toggle("Launch at Login", isOn: $launchAtLogin)
-                Text("Managed with SMAppService via LaunchAtLoginManager (SETTINGS-3). Quiet launch without dashboard is LIFECYCLE-3.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .tabItem { Label("General", systemImage: "gearshape") }
-    }
-
-    /// SETTINGS-5: mirror system Reduce Motion; animation path reads the live flag at present time.
-    private var reduceMotionStatus: String {
-        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? "On" : "Off"
     }
 }

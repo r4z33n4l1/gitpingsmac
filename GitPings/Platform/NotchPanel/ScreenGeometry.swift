@@ -70,7 +70,7 @@ public struct NotchPanelLayout: Equatable, Sendable {
 /// Pure geometry helpers using public NSScreen concept names (safe area / auxiliary top areas).
 public enum ScreenGeometry {
     public static let defaultCollapsedSize = CGSize(width: 200, height: 28)
-    public static let defaultExpandedSize = CGSize(width: 360, height: 72)
+    public static let defaultExpandedSize = CGSize(width: 368, height: 78)
     public static let fallbackTopPadding: CGFloat = 8
 
     public static func hasTopObstruction(_ metrics: ScreenTopMetrics) -> Bool {

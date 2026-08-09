@@ -7,7 +7,10 @@ Date: 2026-08-09
 
 The first audience is the owner and teammates, not the Mac App Store. Teammates should be able to install without bypassing Gatekeeper or running quarantine-removal commands. A future Homebrew Cask should install the same trusted artifact.
 
-No release artifact exists yet, so this ADR defines required settings and validation rather than claiming the app is currently distribution-ready.
+The repository now includes a reproducible packaging script and can produce a
+local QA artifact. A trusted teammate release still requires the maintainer's
+Developer ID Application certificate, Apple notarization credentials, and a
+clean-Mac acceptance pass.
 
 ## Decision
 
@@ -44,8 +47,8 @@ Automatic in-app updates are out of scope for MVP. Teammates update by downloadi
 
 ## Release pipeline
 
-1. Build and test the Release configuration.
-2. Archive the macOS app in Xcode.
+1. Run the unit suite in its Debug test configuration.
+2. Build the universal macOS app in Release configuration.
 3. Sign with Developer ID Application and Hardened Runtime.
 4. Export a distributable app.
 5. Package as ZIP or DMG.

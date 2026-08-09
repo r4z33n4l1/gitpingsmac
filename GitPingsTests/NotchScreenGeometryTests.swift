@@ -65,5 +65,14 @@ final class NotchScreenGeometryTests: XCTestCase {
         )
         XCTAssertEqual(NotchEventPresentation.identityLine(for: event), "acme-fixture/private-service #9")
         XCTAssertEqual(NotchEventPresentation.transitionLine(for: event), "CI passed")
+
+        var newPullRequestEvent = event
+        newPullRequestEvent.kind = .newPullRequestAuthoredByMe
+        newPullRequestEvent.oldValue = ""
+        newPullRequestEvent.newValue = PullRequestLifecycleState.open.rawValue
+        XCTAssertEqual(
+            NotchEventPresentation.transitionLine(for: newPullRequestEvent),
+            "New PR authored by you"
+        )
     }
 }

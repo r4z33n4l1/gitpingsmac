@@ -48,23 +48,34 @@ public struct NotchEventContentView: View {
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: NotchEventPresentation.symbolName(for: event))
-                    .imageScale(.medium)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(NotchEventPresentation.tint(for: event))
                     .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(NotchEventPresentation.identityLine(for: event))
-                        .font(.caption.weight(.semibold))
-                        .lineLimit(1)
-                    Text(NotchEventPresentation.transitionLine(for: event))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    if events.count > 1 || overflowCount > 0 {
-                        Text(queueSummary)
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 6) {
+                        Text(NotchEventPresentation.compactIdentityLine(for: event))
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
                             .lineLimit(1)
+                        Spacer(minLength: 4)
+                        if !queueSummary.isEmpty {
+                            Text(queueSummary)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(.white.opacity(0.08), in: Capsule())
+                        }
                     }
+                    Text(event.title)
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Text(NotchEventPresentation.transitionLine(for: event))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(NotchEventPresentation.tint(for: event))
+                        .lineLimit(1)
                 }
                 Spacer(minLength: 0)
             }
@@ -98,13 +109,15 @@ public struct NotchEventContentView: View {
 
     @ViewBuilder
     private var capsuleBackground: some View {
-        let shape = Capsule(style: .continuous)
-        if reduceMotion {
-            shape.fill(.ultraThinMaterial)
+        let shape = RoundedRectangle(cornerRadius: mode == .notchAttached ? 24 : 20, style: .continuous)
+        if mode == .notchAttached {
+            shape
+                .fill(.black)
+                .overlay(shape.strokeBorder(.white.opacity(0.14), lineWidth: 0.5))
         } else {
             shape
                 .fill(.ultraThinMaterial)
-                .overlay(shape.strokeBorder(.white.opacity(0.12), lineWidth: 0.5))
+                .overlay(shape.strokeBorder(.white.opacity(0.16), lineWidth: 0.5))
         }
     }
 }
@@ -117,6 +130,8 @@ public enum NotchEventPresentation {
 
     public static func transitionLine(for event: TransitionEvent) -> String {
         switch event.kind {
+        case .newPullRequestAuthoredByMe:
+            return "New PR authored by you"
         case .ciChanged:
             return ciPhrase(event.newValue)
         case .mergeChanged:
@@ -132,8 +147,39 @@ public enum NotchEventPresentation {
         }
     }
 
+    public static func compactIdentityLine(for event: TransitionEvent) -> String {
+        let repository = event.repositoryNameWithOwner.split(separator: "/").last
+            .map(String.init) ?? event.repositoryNameWithOwner
+        return "\(repository) · #\(event.number)"
+    }
+
+    public static func tint(for event: TransitionEvent) -> Color {
+        switch event.kind {
+        case .newPullRequestAuthoredByMe:
+            return .blue
+        case .ciChanged:
+            switch event.newValue {
+            case CIState.passing.rawValue: return .green
+            case CIState.failing.rawValue: return .red
+            case CIState.pending.rawValue: return .orange
+            default: return .secondary
+            }
+        case .mergeChanged:
+            switch event.newValue {
+            case MergeState.mergeable.rawValue: return .green
+            case MergeState.conflicting.rawValue: return .red
+            case MergeState.blocked.rawValue: return .orange
+            default: return .secondary
+            }
+        case .closedOrMerged:
+            return event.newValue == PullRequestLifecycleState.merged.rawValue ? .purple : .secondary
+        }
+    }
+
     public static func symbolName(for event: TransitionEvent) -> String {
         switch event.kind {
+        case .newPullRequestAuthoredByMe:
+            return "plus.circle.fill"
         case .ciChanged:
             switch event.newValue {
             case CIState.passing.rawValue: return "checkmark.circle.fill"

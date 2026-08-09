@@ -150,6 +150,7 @@ public struct PRFilterConfiguration: Hashable, Sendable, Codable {
 }
 
 public enum TransitionEventKind: String, Hashable, Sendable, Codable {
+    case newPullRequestAuthoredByMe
     case ciChanged
     case mergeChanged
     case closedOrMerged

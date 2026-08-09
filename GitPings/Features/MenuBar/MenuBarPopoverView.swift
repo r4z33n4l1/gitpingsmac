@@ -7,8 +7,14 @@ struct MenuBarPopoverView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Pinned pull requests")
-                .font(.headline)
+            HStack {
+                Text("Pinned PRs")
+                    .font(.headline)
+                Spacer()
+                if model.isRefreshing {
+                    ProgressView().controlSize(.small)
+                }
+            }
 
             if model.pinnedPullRequests.isEmpty {
                 Text("No pins yet")
@@ -16,25 +22,35 @@ struct MenuBarPopoverView: View {
             } else {
                 ForEach(model.pinnedPullRequests) { pr in
                     Button {
-                        NSWorkspace.shared.open(pr.url)
+                        model.openPullRequest(id: pr.id)
                     } label: {
-                        HStack(alignment: .top, spacing: 8) {
+                        HStack(alignment: .center, spacing: 10) {
                             Image(systemName: rowSymbol(for: pr))
                                 .foregroundStyle(rowColor(for: pr))
+                                .font(.title3)
                                 .accessibilityHidden(true)
 
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("\(pr.repositoryNameWithOwner) #\(pr.number)")
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("#\(pr.number) · \(pr.title)")
+                                    .fontWeight(.medium)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                Text(pr.repositoryNameWithOwner)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
-                                Text(pr.title)
                                     .lineLimit(1)
-                                Text("CI \(pr.ciState.rawValue) · Merge \(pr.mergeState.rawValue)")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .truncationMode(.middle)
+                                Text(statusText(for: pr))
+                                    .font(.caption2.weight(.medium))
+                                    .foregroundStyle(rowColor(for: pr))
+                                    .lineLimit(1)
                             }
                             Spacer(minLength: 0)
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
                         }
+                        .padding(.vertical, 3)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -53,14 +69,14 @@ struct MenuBarPopoverView: View {
                 .foregroundStyle(.secondary)
 
             HStack {
-                Button("Refresh") {}
-                    .disabled(true)
+                Button("Refresh") { model.refresh() }
+                    .disabled(model.isRefreshing || model.signedInAccount == nil)
                 Button("Open Dashboard") {
                     openWindow(id: "dashboard")
                     NSApp.activate(ignoringOtherApps: true)
                 }
-                Button("Settings") {
-                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                SettingsLink {
+                    Text("Settings")
                 }
                 Spacer()
                 Button("Quit") {
@@ -70,11 +86,14 @@ struct MenuBarPopoverView: View {
         }
         .padding(14)
         .frame(width: 360)
+        .task { model.start() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("GitPings pinned pull requests")
     }
 
     private func rowSymbol(for pr: PullRequestSummary) -> String {
+        if pr.lifecycleState == .merged { return "checkmark.seal.fill" }
+        if pr.lifecycleState == .closed { return "xmark.circle" }
         if pr.ciState == .failing || pr.mergeState == .conflicting {
             return "exclamationmark.triangle.fill"
         }
@@ -90,9 +109,23 @@ struct MenuBarPopoverView: View {
     }
 
     private func rowColor(for pr: PullRequestSummary) -> Color {
+        if pr.lifecycleState == .merged { return .purple }
+        if pr.lifecycleState == .closed { return .secondary }
         if pr.ciState == .failing || pr.mergeState == .conflicting { return .red }
         if pr.ciState == .passing && pr.mergeState == .mergeable { return .green }
         return .secondary
+    }
+
+    private func statusText(for pr: PullRequestSummary) -> String {
+        if pr.lifecycleState == .merged { return "Merged" }
+        if pr.lifecycleState == .closed { return "Closed" }
+        if pr.ciState == .failing { return "CI failing · needs attention" }
+        if pr.mergeState == .conflicting { return "Merge conflicts · needs attention" }
+        if pr.ciState == .passing && pr.mergeState == .mergeable { return "CI passing · ready to merge" }
+        if pr.ciState == .pending || pr.mergeState == .checking { return "Checks in progress" }
+        if pr.mergeState == .blocked { return "Merge blocked" }
+        if pr.ciState == .noChecks { return "No CI checks · \(pr.mergeState.rawValue)" }
+        return "CI \(pr.ciState.rawValue) · merge \(pr.mergeState.rawValue)"
     }
 }
 
