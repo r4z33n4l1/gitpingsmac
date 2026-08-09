@@ -2,6 +2,15 @@ import XCTest
 @testable import GitPings
 
 final class GitHubFilterCompilerTests: XCTestCase {
+    func testMissingNodeGraphQLErrorIsRecognizedForStalePinCleanup() {
+        let error = GraphQLErrorDTO(
+            message: "Could not resolve to a node with the global id of 'PR_stale'."
+        )
+
+        XCTAssertTrue(error.indicatesMissingNode)
+        XCTAssertFalse(GraphQLErrorDTO(message: "Something else failed").indicatesMissingNode)
+    }
+
     private let login = "octocat-fixture"
     private let repos = [GitPingsFixtures.publicRepo, GitPingsFixtures.privateOrgRepo]
 

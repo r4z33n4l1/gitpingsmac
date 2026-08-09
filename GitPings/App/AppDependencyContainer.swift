@@ -362,11 +362,20 @@ final class AppModel {
             }
 
             let idsToVerify = Set(previous.keys).union(pinnedIDs)
+            var inaccessiblePinnedIDs: Set<GitHubNodeID> = []
             for missingID in idsToVerify where !result.contains(where: { $0.id == missingID }) {
                 if let verified = try await github.lookupPullRequest(id: missingID),
                    verified.lifecycleState == .closed || verified.lifecycleState == .merged
                 {
                     result.append(verified)
+                } else if pinnedIDs.contains(missingID) {
+                    inaccessiblePinnedIDs.insert(missingID)
+                }
+            }
+            if !inaccessiblePinnedIDs.isEmpty {
+                pinnedIDs.removeAll { inaccessiblePinnedIDs.contains($0) }
+                retainedPinnedPullRequests = retainedPinnedPullRequests.filter {
+                    !inaccessiblePinnedIDs.contains($0.key)
                 }
             }
 
