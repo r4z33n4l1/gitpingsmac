@@ -1,0 +1,45 @@
+{
+  "description": "Redacted deterministic PR fixtures. No tokens or private payloads.",
+  "accountLogin": "octocat-fixture",
+  "repositories": [
+    {
+      "id": "REPO_PUBLIC_1",
+      "nameWithOwner": "octocat-fixture/public-demo",
+      "visibility": "public"
+    },
+    {
+      "id": "REPO_PRIVATE_ORG_1",
+      "nameWithOwner": "acme-fixture/private-service",
+      "visibility": "private"
+    }
+  ],
+  "pullRequests": [
+    {
+      "id": "PR_1",
+      "repositoryId": "REPO_PUBLIC_1",
+      "number": 42,
+      "title": "Add menu bar status",
+      "ciState": "passing",
+      "mergeState": "mergeable",
+      "lifecycleState": "open"
+    },
+    {
+      "id": "PR_2",
+      "repositoryId": "REPO_PRIVATE_ORG_1",
+      "number": 7,
+      "title": "Wire device flow",
+      "ciState": "pending",
+      "mergeState": "checking",
+      "lifecycleState": "open"
+    },
+    {
+      "id": "PR_3",
+      "repositoryId": "REPO_PRIVATE_ORG_1",
+      "number": 9,
+      "title": "Normalize merge states",
+      "ciState": "failing",
+      "mergeState": "conflicting",
+      "lifecycleState": "open"
+    }
+  ]
+}

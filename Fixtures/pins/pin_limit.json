@@ -1,0 +1,5 @@
+{
+  "description": "Pin policy fixture for hard limit of five with explicit replacement.",
+  "maximumPinCount": 5,
+  "silentEvictionAllowed": false
+}

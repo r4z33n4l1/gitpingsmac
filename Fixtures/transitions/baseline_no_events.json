@@ -1,0 +1,5 @@
+{
+  "description": "Initial sync and configuration baselines must emit no transition events.",
+  "baselineMode": true,
+  "expectedEventCount": 0
+}
