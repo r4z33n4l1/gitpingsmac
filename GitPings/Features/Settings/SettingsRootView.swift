@@ -46,6 +46,10 @@ struct SettingsRootView: View {
                 Text("GitPings uses GitHub device flow directly. The client ID is public; no client secret, callback server, or hosted database is required.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Link(
+                    "GitHub App setup guide",
+                    destination: URL(string: "https://github.com/r4z33n4l1/gitpingsmac/blob/main/docs/DISTRIBUTION.md#2-create-a-personal-github-app")!
+                )
             }
         }
         .formStyle(.grouped)

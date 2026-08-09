@@ -1,0 +1,17 @@
+cask "gitpings" do
+  version "__VERSION__"
+  sha256 "__SHA256__"
+
+  url "https://github.com/r4z33n4l1/gitpingsmac/releases/download/v#{version}/GitPings-#{version}.zip"
+  name "GitPings"
+  desc "Menu-bar monitor for pull request CI and mergeability"
+  homepage "https://github.com/r4z33n4l1/gitpingsmac"
+
+  depends_on macos: ">= :tahoe"
+
+  app "GitPings.app"
+
+  zap trash: [
+    "~/Library/Preferences/com.razeenali.gitpings.plist",
+  ]
+end

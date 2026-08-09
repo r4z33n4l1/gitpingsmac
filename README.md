@@ -8,7 +8,8 @@ Target: **macOS Tahoe 26 and newer**
 
 ## Status
 
-Wave 0 foundation scaffolding is in progress on `codex/wave-0-foundation`. Gate 0 is not closed until a real macOS/Xcode host builds, tests, and launches the app bundle.
+The native MVP builds and runs on macOS Tahoe. Developer ID signing,
+notarization, and clean-teammate-Mac acceptance remain release gates.
 
 ## Canonical run entrypoint
 
@@ -21,6 +22,20 @@ Wave 0 foundation scaffolding is in progress on `codex/wave-0-foundation`. Gate 
 ```
 
 Codex Run actions are wired in [`.codex/environments/environment.toml`](.codex/environments/environment.toml).
+
+## Package and share
+
+```bash
+./script/package_release.sh --local
+
+GITPINGS_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
+GITPINGS_NOTARY_PROFILE="GitPingsNotary" \
+./script/package_release.sh --notarize
+```
+
+See the [distribution and teammate setup guide](docs/DISTRIBUTION.md) for GitHub
+App registration, installation, signing, notarization, release, and Homebrew
+instructions.
 
 ## Planning documents
 
