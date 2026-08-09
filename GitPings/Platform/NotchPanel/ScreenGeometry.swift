@@ -72,6 +72,7 @@ public enum ScreenGeometry {
     public static let defaultCollapsedSize = CGSize(width: 200, height: 28)
     public static let defaultExpandedSize = CGSize(width: 368, height: 78)
     public static let fallbackTopPadding: CGFloat = 8
+    public static let notchCollapsedHeight: CGFloat = 2
 
     public static func hasTopObstruction(_ metrics: ScreenTopMetrics) -> Bool {
         if metrics.safeAreaInsetsTop > 0 {
@@ -133,11 +134,18 @@ public enum ScreenGeometry {
             let centerX = reserved?.midX ?? metrics.frame.midX
             // Expand downward from the bottom of the reserved housing band (NOTCH-10).
             let anchorY = reserved?.minY ?? (metrics.frame.maxY - metrics.safeAreaInsetsTop)
+            // Keep the resting panel almost entirely behind the camera housing.
+            // The visible two-point seam then grows downward with the content,
+            // producing the supported illusion that the notch itself expands.
+            let restingWidth = min(
+                expandedSize.width,
+                max(collapsedSize.width, reserved?.width ?? collapsedSize.width)
+            )
             let collapsed = CGRect(
-                x: centerX - collapsedSize.width / 2,
-                y: anchorY - collapsedSize.height,
-                width: collapsedSize.width,
-                height: collapsedSize.height
+                x: centerX - restingWidth / 2,
+                y: anchorY - notchCollapsedHeight,
+                width: restingWidth,
+                height: notchCollapsedHeight
             )
             let expanded = CGRect(
                 x: centerX - expandedSize.width / 2,

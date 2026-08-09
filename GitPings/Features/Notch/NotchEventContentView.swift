@@ -109,12 +109,21 @@ public struct NotchEventContentView: View {
 
     @ViewBuilder
     private var capsuleBackground: some View {
-        let shape = RoundedRectangle(cornerRadius: mode == .notchAttached ? 24 : 20, style: .continuous)
         if mode == .notchAttached {
+            let shape = UnevenRoundedRectangle(
+                cornerRadii: .init(
+                    topLeading: 0,
+                    bottomLeading: 24,
+                    bottomTrailing: 24,
+                    topTrailing: 0
+                ),
+                style: .continuous
+            )
             shape
                 .fill(.black)
                 .overlay(shape.strokeBorder(.white.opacity(0.14), lineWidth: 0.5))
         } else {
+            let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
             shape
                 .fill(.ultraThinMaterial)
                 .overlay(shape.strokeBorder(.white.opacity(0.16), lineWidth: 0.5))

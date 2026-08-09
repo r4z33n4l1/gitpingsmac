@@ -3,6 +3,7 @@ import Foundation
 
 #if canImport(AppKit)
 import AppKit
+import QuartzCore
 import SwiftUI
 #endif
 
@@ -61,7 +62,7 @@ public struct NotchPanelPresentationOptions: Equatable, Sendable {
         fallbackEnabled: Bool = true,
         suppressWhenFullScreen: Bool = true,
         reduceMotion: Bool = false,
-        holdDuration: TimeInterval = 4
+        holdDuration: TimeInterval = 6
     ) {
         self.fallbackEnabled = fallbackEnabled
         self.suppressWhenFullScreen = suppressWhenFullScreen
@@ -187,6 +188,7 @@ public final class NotchPanelCoordinator: NotchPresenting {
         )
         hosting.rootView = content
         let wasVisible = panel.isVisible
+        panel.hasShadow = layout.mode == .fallbackPill
         if !wasVisible {
             panel.alphaValue = options.reduceMotion ? 0 : 1
             panel.setFrame(options.reduceMotion ? layout.expandedFrame : layout.collapsedFrame, display: true)
@@ -341,10 +343,11 @@ public final class NotchPanelCoordinator: NotchPresenting {
     }
 
     private func animatePresentation(of panel: NSPanel, to frame: CGRect) {
-        let duration = options.reduceMotion ? 0.14 : 0.32
+        let duration = options.reduceMotion ? 0.14 : 0.42
         NSAnimationContext.runAnimationGroup { context in
             context.duration = duration
             context.allowsImplicitAnimation = true
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             panel.animator().alphaValue = 1
             if !options.reduceMotion {
                 panel.animator().setFrame(frame, display: true)

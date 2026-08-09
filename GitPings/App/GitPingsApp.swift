@@ -5,15 +5,6 @@ struct GitPingsApp: App {
     @State private var container = AppDependencyContainer.bootstrap()
     private let launchOptions = GitNotaryLaunchOptions.current
 
-    private var dashboardLaunchBehavior: SceneLaunchBehavior {
-        if ProcessInfo.processInfo.environment["GITPINGS_VERIFY_UI"] == "1"
-            || launchOptions.shouldBeginSetup
-        {
-            return .presented
-        }
-        return .suppressed
-    }
-
     var body: some Scene {
         MenuBarExtra {
             MenuBarPopoverView(model: container.appModel)
@@ -33,7 +24,7 @@ struct GitPingsApp: App {
                 }
         }
         .defaultSize(width: 960, height: 640)
-        .defaultLaunchBehavior(dashboardLaunchBehavior)
+        .defaultLaunchBehavior(.presented)
         .commands {
             OpenDashboardCommands()
         }
