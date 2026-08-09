@@ -141,6 +141,60 @@ final class MonitoringTransitionTests: XCTestCase {
         XCTAssertTrue(events.isEmpty)
     }
 
+    func testNewAuthoredPullRequestAfterBaselineEmitsEvent() {
+        let prior = GitPingsFixtures.pullRequest(id: "PR_1")
+        let newPR = GitPingsFixtures.pullRequest(
+            id: "PR_9",
+            number: 99,
+            title: "Agent-authored follow-up",
+            author: "OCTOCAT-FIXTURE"
+        )
+        let events = detector.detectNewAuthoredPullRequests(
+            previouslyObserved: [prior.id: prior],
+            current: [prior, newPR],
+            authenticatedLogin: "octocat-fixture",
+            baselineMode: false,
+            observedAt: now
+        )
+
+        XCTAssertEqual(events.count, 1)
+        XCTAssertEqual(events[0].kind, .newPullRequestAuthoredByMe)
+        XCTAssertEqual(events[0].pullRequestID, newPR.id)
+        XCTAssertEqual(events[0].newValue, PullRequestLifecycleState.open.rawValue)
+    }
+
+    func testNewAuthoredPullRequestBaselineAndOtherAuthorsStaySilent() {
+        let mine = GitPingsFixtures.pullRequest(id: "PR_MINE", author: "octocat-fixture")
+        let theirs = GitPingsFixtures.pullRequest(id: "PR_THEIRS", author: "agent-fixture")
+
+        XCTAssertTrue(detector.detectNewAuthoredPullRequests(
+            previouslyObserved: [:],
+            current: [mine],
+            authenticatedLogin: "octocat-fixture",
+            baselineMode: true,
+            observedAt: now
+        ).isEmpty)
+        XCTAssertTrue(detector.detectNewAuthoredPullRequests(
+            previouslyObserved: [:],
+            current: [theirs],
+            authenticatedLogin: "octocat-fixture",
+            baselineMode: false,
+            observedAt: now
+        ).isEmpty)
+    }
+
+    func testPreviouslyObservedAuthoredPullRequestDoesNotRepeat() {
+        let mine = GitPingsFixtures.pullRequest(id: "PR_MINE", author: "octocat-fixture")
+        let events = detector.detectNewAuthoredPullRequests(
+            previouslyObserved: [mine.id: mine],
+            current: [mine],
+            authenticatedLogin: "octocat-fixture",
+            baselineMode: false,
+            observedAt: now
+        )
+        XCTAssertTrue(events.isEmpty)
+    }
+
     private func fixturesRoot() -> URL {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

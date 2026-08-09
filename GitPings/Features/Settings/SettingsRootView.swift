@@ -76,6 +76,11 @@ struct SettingsRootView: View {
         Form {
             Section("Notifications") {
                 Toggle("Enable status-change notifications", isOn: $model.notificationsEnabled)
+                Toggle(
+                    "New PRs authored by me",
+                    isOn: $model.newAuthoredPullRequestNotificationsEnabled
+                )
+                .disabled(!model.notificationsEnabled)
                 Toggle("Show around the notch", isOn: $model.notchNotificationsEnabled)
                     .disabled(!model.notificationsEnabled)
                 Toggle("System notifications", isOn: $model.systemNotificationsEnabled)
@@ -83,6 +88,9 @@ struct SettingsRootView: View {
                 Toggle("Play a sound", isOn: $model.soundEnabled)
                     .disabled(!model.notificationsEnabled)
             }
+            Text("New-PR alerts watch authored pull requests across selected repositories, even when the dashboard's Authored by me filter is off. Existing PRs establish a silent baseline.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             Section("Test") {
                 Button("Send Test Notification") { model.sendTestNotification() }
                     .disabled(!model.notificationsEnabled)

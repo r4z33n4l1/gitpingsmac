@@ -130,6 +130,8 @@ public enum NotchEventPresentation {
 
     public static func transitionLine(for event: TransitionEvent) -> String {
         switch event.kind {
+        case .newPullRequestAuthoredByMe:
+            return "New PR authored by you"
         case .ciChanged:
             return ciPhrase(event.newValue)
         case .mergeChanged:
@@ -153,6 +155,8 @@ public enum NotchEventPresentation {
 
     public static func tint(for event: TransitionEvent) -> Color {
         switch event.kind {
+        case .newPullRequestAuthoredByMe:
+            return .blue
         case .ciChanged:
             switch event.newValue {
             case CIState.passing.rawValue: return .green
@@ -174,6 +178,8 @@ public enum NotchEventPresentation {
 
     public static func symbolName(for event: TransitionEvent) -> String {
         switch event.kind {
+        case .newPullRequestAuthoredByMe:
+            return "plus.circle.fill"
         case .ciChanged:
             switch event.newValue {
             case CIState.passing.rawValue: return "checkmark.circle.fill"

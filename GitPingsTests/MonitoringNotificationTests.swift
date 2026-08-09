@@ -39,6 +39,26 @@ final class MonitoringNotificationTests: XCTestCase {
         XCTAssertTrue(delivered.isEmpty)
     }
 
+    func testNewAuthoredPullRequestIsRoutedByDefault() async {
+        let router = NotificationRouter(preferences: .mvpTesting)
+        let event = TransitionEvent(
+            pullRequestID: GitHubNodeID("PR_NEW"),
+            repositoryNameWithOwner: "octocat-fixture/public-demo",
+            number: 101,
+            title: "New agent PR",
+            kind: .newPullRequestAuthoredByMe,
+            oldValue: "",
+            newValue: PullRequestLifecycleState.open.rawValue,
+            observedAt: GitPingsFixtures.fixedNow
+        )
+
+        await router.route(events: [event])
+        let delivered = await router.delivered
+        XCTAssertEqual(delivered.count, 1)
+        XCTAssertEqual(delivered[0].channel, .notch)
+        XCTAssertEqual(delivered[0].events.first?.kind, .newPullRequestAuthoredByMe)
+    }
+
     func testChannelTogglesGateDelivery() async throws {
         var prefs = NotificationPreferences.mvpTesting
         prefs.notchEnabled = false

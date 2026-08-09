@@ -29,7 +29,25 @@ final class AppModel {
         didSet { UserDefaults.standard.set(oauthClientID, forKey: Keys.oauthClientID) }
     }
     var notificationsEnabled: Bool {
-        didSet { UserDefaults.standard.set(notificationsEnabled, forKey: Keys.notificationsEnabled) }
+        didSet {
+            UserDefaults.standard.set(notificationsEnabled, forKey: Keys.notificationsEnabled)
+            if notificationsEnabled, !oldValue, didStart {
+                authoredPullRequestBaselinePending = true
+                refresh()
+            }
+        }
+    }
+    var newAuthoredPullRequestNotificationsEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(
+                newAuthoredPullRequestNotificationsEnabled,
+                forKey: Keys.newAuthoredPullRequestNotificationsEnabled
+            )
+            if newAuthoredPullRequestNotificationsEnabled, !oldValue, didStart {
+                authoredPullRequestBaselinePending = true
+                refresh()
+            }
+        }
     }
     var notchNotificationsEnabled: Bool {
         didSet { UserDefaults.standard.set(notchNotificationsEnabled, forKey: Keys.notchEnabled) }
@@ -45,6 +63,8 @@ final class AppModel {
     @ObservationIgnored private let detector = TransitionDetector()
     @ObservationIgnored private var didStart = false
     @ObservationIgnored private var baselinePending = true
+    @ObservationIgnored private var authoredPullRequestBaselinePending = true
+    @ObservationIgnored private var observedAuthoredPullRequests: [GitHubNodeID: PullRequestSummary] = [:]
     @ObservationIgnored private var refreshLoopTask: Task<Void, Never>?
     @ObservationIgnored private var authPollingTask: Task<Void, Never>?
     @ObservationIgnored private lazy var notchPresenter = NotchPanelCoordinator(
@@ -62,6 +82,9 @@ final class AppModel {
             ?? defaults.string(forKey: Keys.oauthClientID)
             ?? ""
         notificationsEnabled = defaults.object(forKey: Keys.notificationsEnabled) as? Bool ?? true
+        newAuthoredPullRequestNotificationsEnabled = defaults.object(
+            forKey: Keys.newAuthoredPullRequestNotificationsEnabled
+        ) as? Bool ?? true
         notchNotificationsEnabled = defaults.object(forKey: Keys.notchEnabled) as? Bool ?? true
         systemNotificationsEnabled = defaults.object(forKey: Keys.systemEnabled) as? Bool ?? false
         soundEnabled = defaults.object(forKey: Keys.soundEnabled) as? Bool ?? false
@@ -159,6 +182,8 @@ final class AppModel {
             pullRequests = []
             pinnedIDs = []
             retainedPinnedPullRequests = [:]
+            observedAuthoredPullRequests = [:]
+            authoredPullRequestBaselinePending = true
             baselinePending = true
             lastSuccessfulRefreshAt = nil
             menuBarSeverity = .neutral
@@ -191,6 +216,7 @@ final class AppModel {
             selectedRepositoryIDs.insert(repository.id)
         }
         baselinePending = true
+        authoredPullRequestBaselinePending = true
         refresh()
     }
 
@@ -209,6 +235,7 @@ final class AppModel {
 
     func filtersChanged() {
         baselinePending = true
+        authoredPullRequestBaselinePending = true
         refresh()
     }
 
@@ -229,7 +256,8 @@ final class AppModel {
 
     func openPullRequest(id: GitHubNodeID) {
         guard let url = pullRequests.first(where: { $0.id == id })?.url
-            ?? retainedPinnedPullRequests[id]?.url,
+            ?? retainedPinnedPullRequests[id]?.url
+            ?? observedAuthoredPullRequests[id]?.url,
             url.scheme == "https",
             url.host?.lowercased() == "github.com"
         else { return }
@@ -282,6 +310,8 @@ final class AppModel {
         let selected = repositories.filter { selectedRepositoryIDs.contains($0.id) }
         guard !selected.isEmpty else {
             pullRequests = []
+            observedAuthoredPullRequests = [:]
+            authoredPullRequestBaselinePending = true
             lastSuccessfulRefreshAt = nil
             statusMessage = "Select repositories to monitor"
             updateMenuBarSeverity()
@@ -299,6 +329,27 @@ final class AppModel {
                 login: account.login
             ).pullRequests
 
+            var authoredPullRequests = result.filter {
+                $0.authorLogin.caseInsensitiveCompare(account.login) == .orderedSame
+            }
+            if notificationsEnabled,
+               newAuthoredPullRequestNotificationsEnabled,
+               !filters.includeAllOpen,
+               !filters.includeAuthoredByMe
+            {
+                let authoredOnly = PRFilterConfiguration(
+                    includeAllOpen: false,
+                    includeAuthoredByMe: true,
+                    includeAssignedToMe: false,
+                    includeReviewRequestedFromMe: false
+                )
+                authoredPullRequests = try await github.fetchPullRequests(
+                    repositories: selected,
+                    filters: authoredOnly,
+                    login: account.login
+                ).pullRequests
+            }
+
             let idsToVerify = Set(previous.keys).union(pinnedIDs)
             for missingID in idsToVerify where !result.contains(where: { $0.id == missingID }) {
                 if let verified = try await github.lookupPullRequest(id: missingID),
@@ -309,12 +360,27 @@ final class AppModel {
             }
 
             let now = Date()
-            let events = detector.detectTransitions(
+            let stateEvents = detector.detectTransitions(
                 previous: previous,
                 current: result,
                 baselineMode: baselinePending,
                 observedAt: now
             )
+            var authoredEvents: [TransitionEvent] = []
+            if notificationsEnabled, newAuthoredPullRequestNotificationsEnabled {
+                authoredEvents = detector.detectNewAuthoredPullRequests(
+                    previouslyObserved: observedAuthoredPullRequests,
+                    current: authoredPullRequests,
+                    authenticatedLogin: account.login,
+                    baselineMode: authoredPullRequestBaselinePending,
+                    observedAt: now
+                )
+                for pullRequest in authoredPullRequests {
+                    observedAuthoredPullRequests[pullRequest.id] = pullRequest
+                }
+                authoredPullRequestBaselinePending = false
+            }
+            let events = authoredEvents + stateEvents
             pullRequests = result.filter { $0.lifecycleState == .open }
             retainedPinnedPullRequests = retainedPinnedPullRequests.filter { pinnedIDs.contains($0.key) }
             for pullRequest in result where pullRequest.lifecycleState != .open && pinnedIDs.contains(pullRequest.id) {
@@ -394,6 +460,7 @@ final class AppModel {
         static let pins = "GitPings.pins"
         static let filters = "GitPings.filters"
         static let notificationsEnabled = "GitPings.notifications.enabled"
+        static let newAuthoredPullRequestNotificationsEnabled = "GitPings.notifications.newAuthoredPullRequest"
         static let notchEnabled = "GitPings.notifications.notch"
         static let systemEnabled = "GitPings.notifications.system"
         static let soundEnabled = "GitPings.notifications.sound"
