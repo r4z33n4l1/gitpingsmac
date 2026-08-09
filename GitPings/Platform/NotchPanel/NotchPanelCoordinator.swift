@@ -107,7 +107,10 @@ public final class NotchPanelCoordinator: NotchPresenting {
         self.callbacks = callbacks
         #if canImport(AppKit)
         self.metricsProvider = metricsProvider ?? {
-            NSScreen.main.map { ScreenGeometry.metrics(from: $0) }
+            // Apple documents screens[0] as the screen containing the menu bar.
+            // NSScreen.main follows keyboard focus and may be a different display,
+            // which would incorrectly select the detached fallback layout.
+            NSScreen.screens.first.map { ScreenGeometry.metrics(from: $0) }
         }
         #else
         self.metricsProvider = metricsProvider ?? { nil }
