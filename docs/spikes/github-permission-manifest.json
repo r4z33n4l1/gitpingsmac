@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "documentPurpose": "feasibility-permission-plan",
   "product": "GitPings",
   "githubApp": {
     "visibility": "public",

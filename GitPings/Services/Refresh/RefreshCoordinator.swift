@@ -110,7 +110,8 @@ public actor RefreshCoordinator: RefreshCoordinating {
             guard !pendingTriggers.isEmpty else { break }
 
             let now = clock.now()
-            if let nextEligibleAt, now < nextEligibleAt {
+            let hasUserOrLifecycleTrigger = pendingTriggers.contains { $0 != .timer }
+            if let nextEligibleAt, now < nextEligibleAt, !hasUserOrLifecycleTrigger {
                 // No wall sleep: leave triggers pending until a later request after clock advances.
                 break
             }

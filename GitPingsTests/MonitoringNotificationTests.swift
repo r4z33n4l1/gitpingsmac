@@ -41,9 +41,9 @@ final class MonitoringNotificationTests: XCTestCase {
 
     func testChannelTogglesGateDelivery() async throws {
         var prefs = NotificationPreferences.mvpTesting
-        prefs.channelNotch = false
-        prefs.channelSystem = false
-        prefs.channelSound = true
+        prefs.notchEnabled = false
+        prefs.systemEnabled = false
+        prefs.soundEnabled = true
         let router = NotificationRouter(preferences: prefs)
 
         let event = TransitionEvent(
@@ -119,10 +119,16 @@ final class MonitoringNotificationTests: XCTestCase {
 
         try await purger.purge(clock: clock)
 
-        XCTAssertTrue(try await pins.pinnedIDs().isEmpty)
-        XCTAssertTrue(try await cache.cachedPullRequests().isEmpty)
-        XCTAssertTrue(try await snapshots.lastNormalizedSnapshots().isEmpty)
-        XCTAssertEqual(await history.count(), 0)
-        XCTAssertTrue(try await preferences.selectedRepositoryIDs().isEmpty)
+        let pinnedIDs = try await pins.pinnedIDs()
+        let cachedPullRequests = try await cache.cachedPullRequests()
+        let normalizedSnapshots = try await snapshots.lastNormalizedSnapshots()
+        let historyCount = await history.count()
+        let selectedRepositoryIDs = try await preferences.selectedRepositoryIDs()
+
+        XCTAssertTrue(pinnedIDs.isEmpty)
+        XCTAssertTrue(cachedPullRequests.isEmpty)
+        XCTAssertTrue(normalizedSnapshots.isEmpty)
+        XCTAssertEqual(historyCount, 0)
+        XCTAssertTrue(selectedRepositoryIDs.isEmpty)
     }
 }

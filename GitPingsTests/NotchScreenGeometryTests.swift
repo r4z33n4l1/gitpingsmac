@@ -16,7 +16,7 @@ final class NotchScreenGeometryTests: XCTestCase {
         let layout = ScreenGeometry.layout(for: metrics)
         XCTAssertEqual(layout?.mode, .fallbackPill)
         XCTAssertNil(layout?.reservedTopCenter)
-        XCTAssertEqual(layout?.expandedFrame.midX, 960, accuracy: 0.5)
+        XCTAssertEqual(layout!.expandedFrame.midX, 960, accuracy: 0.5)
         XCTAssertLessThan(layout!.expandedFrame.maxY, metrics.visibleFrame.maxY)
     }
 
@@ -34,8 +34,8 @@ final class NotchScreenGeometryTests: XCTestCase {
         XCTAssertEqual(ScreenGeometry.presentationMode(for: metrics), .notchAttached)
 
         let reserved = ScreenGeometry.reservedTopCenterBand(in: metrics)
-        XCTAssertEqual(reserved?.minX, 620, accuracy: 0.5)
-        XCTAssertEqual(reserved?.maxX, 892, accuracy: 0.5)
+        XCTAssertEqual(reserved!.minX, 620, accuracy: 0.5)
+        XCTAssertEqual(reserved!.maxX, 892, accuracy: 0.5)
 
         let layout = ScreenGeometry.layout(for: metrics)
         XCTAssertEqual(layout?.mode, .notchAttached)

@@ -1,4 +1,4 @@
-# S1 — GitHub client-only feasibility spike
+# GitHub client-only feasibility spike
 
 Task: S1 (GitHub Platform)  
 Branch: `cursor/s1-github-feasibility-03e3` (from `codex/wave-0-foundation`)  

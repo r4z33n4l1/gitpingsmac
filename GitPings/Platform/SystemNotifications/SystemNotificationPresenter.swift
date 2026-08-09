@@ -27,7 +27,14 @@ public actor SystemNotificationPresenter: SystemNotificationPresenting {
     public func present(event: TransitionEvent) async {
         // Permission is not requested at launch; callers should invoke
         // `requestAuthorizationIfNeeded` when the user enables the system channel.
-        guard authorizationGranted == true || await requestAuthorizationIfNeeded() else {
+        let isAuthorized: Bool
+        if authorizationGranted == true {
+            isAuthorized = true
+        } else {
+            isAuthorized = await requestAuthorizationIfNeeded()
+        }
+
+        guard isAuthorized else {
             return
         }
 

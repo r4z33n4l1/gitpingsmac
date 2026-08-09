@@ -1,4 +1,4 @@
-# Representative GraphQL cost projection (S1 worksheet)
+# Representative GraphQL cost projection
 
 Host: fixture math only — not measured against live GitHub.
 

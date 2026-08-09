@@ -9,7 +9,9 @@ cd "$ROOT_DIR"
 PROJECT="GitPings.xcodeproj"
 SCHEME="GitPings"
 CONFIG="Debug"
-DERIVED_DATA="${ROOT_DIR}/DerivedData"
+# Keep generated app bundles outside Documents/iCloud-backed folders. Finder and
+# File Provider xattrs inherited there can make local ad-hoc code signing fail.
+DERIVED_DATA="${GITPINGS_DERIVED_DATA:-${TMPDIR%/}/GitPingsDerivedData}"
 APP_BUNDLE="${DERIVED_DATA}/Build/Products/${CONFIG}/GitPings.app"
 BUNDLE_ID="com.razeenali.gitpings"
 
@@ -73,9 +75,6 @@ git_commit() {
 kill_existing() {
   if command -v pkill >/dev/null 2>&1; then
     pkill -x GitPings 2>/dev/null || true
-  fi
-  if [[ "$(uname -s)" == "Darwin" ]] && command -v osascript >/dev/null 2>&1; then
-    osascript -e 'tell application "GitPings" to quit' >/dev/null 2>&1 || true
   fi
 }
 

@@ -1,4 +1,4 @@
-# S2 Spike — Menu bar + notch/fallback (public APIs only)
+# Menu bar and notch/fallback feasibility (public APIs only)
 
 Task: S2 — macOS lifecycle and notch feasibility  
 Branch: `codex/wave-0-foundation`  

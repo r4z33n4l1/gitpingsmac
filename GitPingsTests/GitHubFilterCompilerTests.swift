@@ -210,7 +210,7 @@ final class GitHubFilterCompilerTests: XCTestCase {
         let manifestURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-            .appendingPathComponent("GitPings/Infrastructure/GitHub/permission-manifest.json")
+            .appendingPathComponent("docs/spikes/github-permission-manifest.json")
         let data = try Data(contentsOf: manifestURL)
         let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         let perms = try XCTUnwrap(json["repositoryPermissions"] as? [String: String])

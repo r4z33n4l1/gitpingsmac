@@ -1,4 +1,4 @@
-# S3/S4 Persistence + monitoring feasibility spike
+# Persistence and monitoring feasibility spike
 
 **Task:** S3/S4 — Persistence, sandbox, monitoring contracts  
 **Branch:** `codex/wave-0-foundation`  

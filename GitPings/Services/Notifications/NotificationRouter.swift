@@ -63,8 +63,6 @@ public actor NotificationRouter: NotificationRouting {
     }
 
     public func sendTestNotification(channel: NotificationChannel) async {
-        guard preferences.allows(channel: channel) || channel == .notch else { return }
-
         let testEvent = TransitionEvent(
             pullRequestID: GitHubNodeID("PR_TEST"),
             repositoryNameWithOwner: "octocat-fixture/public-demo",

@@ -116,6 +116,7 @@ public enum NotificationChannel: String, Sendable, CaseIterable {
     case sound
 }
 
+@MainActor
 public protocol NotchPresenting: Sendable {
     func present(events: [TransitionEvent]) async
     func dismiss() async

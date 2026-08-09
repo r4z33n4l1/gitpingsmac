@@ -84,9 +84,12 @@ public final class NotchPanelCoordinator: NotchPresenting {
     #if canImport(AppKit)
     private var panel: NSPanel?
     private var hosting: NSHostingView<NotchEventContentView>?
-    private var screenParameterObserver: NSObjectProtocol?
-    private var lockObserver: NSObjectProtocol?
-    private var unlockObserver: NSObjectProtocol?
+    // Notification tokens are only installed/removed as part of this coordinator's
+    // lifecycle. Marking the references unsafe-nonisolated lets Swift 6's
+    // nonisolated deinitializer release them without sending the AppKit objects.
+    nonisolated(unsafe) private var screenParameterObserver: NSObjectProtocol?
+    nonisolated(unsafe) private var lockObserver: NSObjectProtocol?
+    nonisolated(unsafe) private var unlockObserver: NSObjectProtocol?
     #endif
 
     public init(
@@ -154,17 +157,19 @@ public final class NotchPanelCoordinator: NotchPresenting {
         let appWasActive = NSApp.isActive
         ensurePanel()
         guard let panel, let hosting else { return }
+        let onHover = callbacks.onHoverChanged
+        let onClick = callbacks.onEventClicked
 
         let content = NotchEventContentView(
             events: currentEvents,
             overflowCount: overflow,
             mode: layout.mode,
             reduceMotion: options.reduceMotion,
-            onHover: { [weak self] hovering in
-                self?.callbacks.onHoverChanged?(hovering)
+            onHover: { hovering in
+                onHover?(hovering)
             },
-            onClick: { [weak self] event in
-                self?.callbacks.onEventClicked?(event)
+            onClick: { event in
+                onClick?(event)
             }
         )
         hosting.rootView = content

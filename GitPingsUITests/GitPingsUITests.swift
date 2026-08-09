@@ -6,6 +6,7 @@ final class GitPingsUITests: XCTestCase {
     }
 
     /// Wave 0 smoke: launch the menu-bar app process. Richer UI coverage lands after Gate 0.
+    @MainActor
     func testAppLaunches() throws {
         #if !os(macOS)
         throw XCTSkip("App launch UITest requires macOS host.")
