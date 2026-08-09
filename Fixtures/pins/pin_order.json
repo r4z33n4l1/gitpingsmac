@@ -1,0 +1,7 @@
+{
+  "description": "Newly pinned items append last; reorder is explicit and manual (PIN-6).",
+  "pinSequence": ["PR_1", "PR_2", "PR_3"],
+  "expectedOrderAfterPin": ["PR_1", "PR_2", "PR_3"],
+  "reorderTo": ["PR_3", "PR_1", "PR_2"],
+  "expectedOrderAfterReorder": ["PR_3", "PR_1", "PR_2"]
+}
