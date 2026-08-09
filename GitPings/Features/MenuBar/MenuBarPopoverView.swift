@@ -75,8 +75,8 @@ struct MenuBarPopoverView: View {
                     openWindow(id: "dashboard")
                     NSApp.activate(ignoringOtherApps: true)
                 }
-                Button("Settings") {
-                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                SettingsLink {
+                    Text("Settings")
                 }
                 Spacer()
                 Button("Quit") {
