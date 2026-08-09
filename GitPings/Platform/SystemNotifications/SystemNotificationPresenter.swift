@@ -78,7 +78,7 @@ public struct SystemUNUserNotificationCenterProxy: NotificationCenterProxying {
     public func requestAlertAuthorization() async -> Bool {
         do {
             return try await UNUserNotificationCenter.current()
-                .requestAuthorization(options: [.alert, .sound])
+                .requestAuthorization(options: [.alert])
         } catch {
             return false
         }
@@ -93,7 +93,6 @@ public struct SystemUNUserNotificationCenterProxy: NotificationCenterProxying {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
-        content.sound = .default
         content.userInfo = userInfo
 
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)

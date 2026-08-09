@@ -80,6 +80,11 @@ public final class NotchPanelCoordinator: NotchPresenting {
     private var isScreenLocked: Bool = false
     private var isTargetFullScreen: Bool = false
     private var currentEvents: [TransitionEvent] = []
+    private var currentLayout: NotchPanelLayout?
+    private var dismissalTask: Task<Void, Never>?
+    private var presentationGeneration = 0
+    private var countdownStartedAt: TimeInterval = 0
+    private var remainingHoldDuration: TimeInterval = 0
 
     #if canImport(AppKit)
     private var panel: NSPanel?
@@ -152,6 +157,10 @@ public final class NotchPanelCoordinator: NotchPresenting {
         ) else {
             return
         }
+        currentLayout = layout
+        presentationGeneration += 1
+        dismissalTask?.cancel()
+        remainingHoldDuration = options.holdDuration
 
         #if canImport(AppKit)
         let appWasActive = NSApp.isActive
@@ -165,18 +174,31 @@ public final class NotchPanelCoordinator: NotchPresenting {
             overflowCount: overflow,
             mode: layout.mode,
             reduceMotion: options.reduceMotion,
-            onHover: { hovering in
+            onHover: { [weak self] hovering in
                 onHover?(hovering)
+                self?.handleHover(hovering)
             },
-            onClick: { event in
+            onClick: { [weak self] event in
                 onClick?(event)
+                Task { @MainActor in
+                    await self?.dismiss()
+                }
             }
         )
         hosting.rootView = content
-        panel.setFrame(layout.expandedFrame, display: true)
-        // Nonactivating show — do not steal keyboard focus (NOTCH-4).
-        panel.orderFrontRegardless()
+        let wasVisible = panel.isVisible
+        if !wasVisible {
+            panel.alphaValue = options.reduceMotion ? 0 : 1
+            panel.setFrame(options.reduceMotion ? layout.expandedFrame : layout.collapsedFrame, display: true)
+            // Nonactivating show — do not steal keyboard focus (NOTCH-4).
+            panel.orderFrontRegardless()
+            animatePresentation(of: panel, to: layout.expandedFrame)
+        } else {
+            panel.alphaValue = 1
+            panel.setFrame(layout.expandedFrame, display: true)
+        }
         panel.resignKey()
+        scheduleDismiss(after: remainingHoldDuration)
 
         let telemetry = NotchPanelFocusTelemetry(
             screenID: metrics.screenID,
@@ -194,11 +216,55 @@ public final class NotchPanelCoordinator: NotchPresenting {
     }
 
     public func dismiss() async {
+        presentationGeneration += 1
+        let generation = presentationGeneration
+        dismissalTask?.cancel()
+        dismissalTask = nil
         #if canImport(AppKit)
-        panel?.orderOut(nil)
+        if let panel, panel.isVisible {
+            let duration = options.reduceMotion ? 0.14 : 0.24
+            await NSAnimationContext.runAnimationGroup { context in
+                context.duration = duration
+                context.allowsImplicitAnimation = true
+                panel.animator().alphaValue = 0
+                if !options.reduceMotion, let currentLayout {
+                    panel.animator().setFrame(currentLayout.collapsedFrame, display: true)
+                }
+            }
+            guard generation == presentationGeneration else { return }
+            panel.orderOut(nil)
+            panel.alphaValue = 1
+        }
         #endif
         currentEvents = []
+        currentLayout = nil
         callbacks.onDismissalCompleted?()
+    }
+
+    private func scheduleDismiss(after delay: TimeInterval) {
+        dismissalTask?.cancel()
+        guard delay > 0 else { return }
+        let generation = presentationGeneration
+        countdownStartedAt = ProcessInfo.processInfo.systemUptime
+        dismissalTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled else { return }
+            guard let self, generation == self.presentationGeneration else { return }
+            await self.dismiss()
+        }
+    }
+
+    private func handleHover(_ hovering: Bool) {
+        guard !currentEvents.isEmpty else { return }
+        if hovering {
+            let elapsed = max(0, ProcessInfo.processInfo.systemUptime - countdownStartedAt)
+            remainingHoldDuration = max(0.25, remainingHoldDuration - elapsed)
+            dismissalTask?.cancel()
+            dismissalTask = nil
+        } else {
+            // A short grace period keeps small pointer slips from closing the alert.
+            scheduleDismiss(after: remainingHoldDuration + 0.25)
+        }
     }
 
     private func installSuppressionObservers() {
@@ -256,7 +322,7 @@ public final class NotchPanelCoordinator: NotchPresenting {
         panel.hasShadow = true
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
-        panel.animationBehavior = .utilityWindow
+        panel.animationBehavior = .none
 
         let hosting = NSHostingView(
             rootView: NotchEventContentView(
@@ -272,6 +338,18 @@ public final class NotchPanelCoordinator: NotchPresenting {
 
         self.panel = panel
         self.hosting = hosting
+    }
+
+    private func animatePresentation(of panel: NSPanel, to frame: CGRect) {
+        let duration = options.reduceMotion ? 0.14 : 0.32
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = duration
+            context.allowsImplicitAnimation = true
+            panel.animator().alphaValue = 1
+            if !options.reduceMotion {
+                panel.animator().setFrame(frame, display: true)
+            }
+        }
     }
 
     private func recomputeFrameIfVisible() async {
