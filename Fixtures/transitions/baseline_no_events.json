@@ -1,5 +1,20 @@
 {
   "description": "Initial sync and configuration baselines must emit no transition events.",
   "baselineMode": true,
-  "expectedEventCount": 0
+  "expectedEventCount": 0,
+  "previous": [],
+  "current": [
+    {
+      "id": "PR_1",
+      "ciState": "passing",
+      "mergeState": "mergeable",
+      "lifecycleState": "open"
+    },
+    {
+      "id": "PR_2",
+      "ciState": "pending",
+      "mergeState": "checking",
+      "lifecycleState": "open"
+    }
+  ]
 }

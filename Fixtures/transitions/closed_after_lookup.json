@@ -1,0 +1,28 @@
+{
+  "description": "Verified closed/merged after targeted lookup emits closedOrMerged once.",
+  "baselineMode": false,
+  "previous": [
+    {
+      "id": "PR_1",
+      "ciState": "passing",
+      "mergeState": "mergeable",
+      "lifecycleState": "open"
+    }
+  ],
+  "current": [
+    {
+      "id": "PR_1",
+      "ciState": "passing",
+      "mergeState": "mergeable",
+      "lifecycleState": "merged"
+    }
+  ],
+  "expectedEvents": [
+    {
+      "pullRequestID": "PR_1",
+      "kind": "closedOrMerged",
+      "oldValue": "open",
+      "newValue": "merged"
+    }
+  ]
+}

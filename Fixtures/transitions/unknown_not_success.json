@@ -1,0 +1,32 @@
+{
+  "description": "Unknown CI/merge never maps to passing/mergeable success semantics.",
+  "baselineMode": false,
+  "assertions": {
+    "unknownEqualsPassing": false,
+    "unknownEqualsMergeable": false,
+    "severityForUnknownIsNotHealthy": true
+  },
+  "previous": [
+    {
+      "id": "PR_4",
+      "ciState": "unknown",
+      "mergeState": "unknown",
+      "lifecycleState": "open"
+    }
+  ],
+  "current": [
+    {
+      "id": "PR_4",
+      "ciState": "unknown",
+      "mergeState": "unknown",
+      "lifecycleState": "open"
+    }
+  ],
+  "expectedEventCount": 0,
+  "transitionToPassingWouldEmit": {
+    "ciState": "passing",
+    "kind": "ciChanged",
+    "oldValue": "unknown",
+    "newValue": "passing"
+  }
+}
