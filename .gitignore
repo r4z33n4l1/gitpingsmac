@@ -1,0 +1,26 @@
+.DS_Store
+
+# Xcode and Swift build output
+DerivedData/
+.build/
+dist/
+build/
+*.xcresult
+*.xcarchive
+*.dSYM
+
+# Per-user Xcode state
+xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Verification artifacts may contain large or private local evidence
+artifacts/verification/
+
+# Local credentials and signing material
+.env
+.env.*
+!.env.example
+*.p8
+*.p12
+*.pem
