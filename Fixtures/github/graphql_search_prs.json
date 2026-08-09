@@ -1,0 +1,112 @@
+{
+  "description": "Redacted GraphQL search envelope for open PRs. No private payloads or tokens.",
+  "data": {
+    "search": {
+      "pageInfo": {
+        "hasNextPage": false,
+        "endCursor": "Y3Vyc29yOjE="
+      },
+      "nodes": [
+        {
+          "__typename": "PullRequest",
+          "id": "PR_1",
+          "number": 42,
+          "title": "Add menu bar status",
+          "url": "https://github.com/octocat-fixture/public-demo/pull/42",
+          "state": "OPEN",
+          "merged": false,
+          "headRefName": "feature/menu-bar",
+          "baseRefName": "main",
+          "updatedAt": "2026-08-09T00:00:00Z",
+          "mergeable": "MERGEABLE",
+          "mergeStateStatus": "CLEAN",
+          "author": { "login": "octocat-fixture" },
+          "repository": {
+            "id": "REPO_PUBLIC_1",
+            "nameWithOwner": "octocat-fixture/public-demo",
+            "isPrivate": false
+          },
+          "commits": {
+            "nodes": [
+              {
+                "commit": {
+                  "statusCheckRollup": {
+                    "state": "SUCCESS",
+                    "contexts": { "totalCount": 3 }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "__typename": "PullRequest",
+          "id": "PR_UNKNOWN_CI",
+          "number": 99,
+          "title": "Unknown rollup sample",
+          "url": "https://github.com/octocat-fixture/public-demo/pull/99",
+          "state": "OPEN",
+          "merged": false,
+          "headRefName": "feature/unknown",
+          "baseRefName": "main",
+          "updatedAt": "2026-08-09T00:00:00Z",
+          "mergeable": "UNKNOWN",
+          "mergeStateStatus": "UNKNOWN",
+          "author": { "login": "octocat-fixture" },
+          "repository": {
+            "id": "REPO_PUBLIC_1",
+            "nameWithOwner": "octocat-fixture/public-demo",
+            "isPrivate": false
+          },
+          "commits": {
+            "nodes": [
+              {
+                "commit": {
+                  "statusCheckRollup": null
+                }
+              }
+            ]
+          }
+        },
+        {
+          "__typename": "PullRequest",
+          "id": "PR_WEIRD_ENUM",
+          "number": 100,
+          "title": "Unrecognized enum sample",
+          "url": "https://github.com/octocat-fixture/public-demo/pull/100",
+          "state": "OPEN",
+          "merged": false,
+          "headRefName": "feature/weird",
+          "baseRefName": "main",
+          "updatedAt": "2026-08-09T00:00:00Z",
+          "mergeable": "SOMETHING_NEW",
+          "mergeStateStatus": "ALSO_NEW",
+          "author": { "login": "octocat-fixture" },
+          "repository": {
+            "id": "REPO_PUBLIC_1",
+            "nameWithOwner": "octocat-fixture/public-demo",
+            "isPrivate": false
+          },
+          "commits": {
+            "nodes": [
+              {
+                "commit": {
+                  "statusCheckRollup": {
+                    "state": "TOTALLY_NEW_STATE",
+                    "contexts": { "totalCount": 1 }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "rateLimit": {
+      "limit": 5000,
+      "remaining": 4980,
+      "resetAt": "2026-08-09T01:00:00Z",
+      "cost": 3
+    }
+  }
+}

@@ -40,6 +40,47 @@
       "ciState": "failing",
       "mergeState": "conflicting",
       "lifecycleState": "open"
+    },
+    {
+      "id": "PR_4",
+      "repositoryId": "REPO_PUBLIC_1",
+      "number": 11,
+      "title": "Unknown CI sample",
+      "ciState": "unknown",
+      "mergeState": "unknown",
+      "lifecycleState": "open"
+    },
+    {
+      "id": "PR_5",
+      "repositoryId": "REPO_PUBLIC_1",
+      "number": 12,
+      "title": "Blocked merge sample",
+      "ciState": "passing",
+      "mergeState": "blocked",
+      "lifecycleState": "open"
+    },
+    {
+      "id": "PR_6",
+      "repositoryId": "REPO_PUBLIC_1",
+      "number": 13,
+      "title": "No checks sample",
+      "ciState": "noChecks",
+      "mergeState": "mergeable",
+      "lifecycleState": "open"
+    }
+  ],
+  "compiledSearchExamples": [
+    {
+      "dimension": "authoredByMe",
+      "query": "is:pr is:open repo:octocat-fixture/public-demo repo:acme-fixture/private-service author:octocat-fixture"
+    },
+    {
+      "dimension": "assignedToMe",
+      "query": "is:pr is:open repo:octocat-fixture/public-demo repo:acme-fixture/private-service assignee:octocat-fixture"
+    },
+    {
+      "dimension": "reviewRequestedFromMe",
+      "query": "is:pr is:open repo:octocat-fixture/public-demo repo:acme-fixture/private-service review-requested:octocat-fixture"
     }
   ]
 }
