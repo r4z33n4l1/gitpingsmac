@@ -8,6 +8,12 @@ public struct GraphQLResponse<T: Decodable>: Decodable, Sendable where T: Sendab
 
 public struct GraphQLErrorDTO: Decodable, Hashable, Sendable {
     public var message: String
+
+    public var indicatesMissingNode: Bool {
+        let normalized = message.lowercased()
+        return normalized.contains("could not resolve to a node")
+            && normalized.contains("global id")
+    }
 }
 
 public struct RateLimitDTO: Decodable, Hashable, Sendable {

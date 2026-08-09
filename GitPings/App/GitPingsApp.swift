@@ -3,10 +3,7 @@ import SwiftUI
 @main
 struct GitPingsApp: App {
     @State private var container = AppDependencyContainer.bootstrap()
-
-    private var dashboardLaunchBehavior: SceneLaunchBehavior {
-        ProcessInfo.processInfo.environment["GITPINGS_VERIFY_UI"] == "1" ? .presented : .suppressed
-    }
+    private let launchOptions = GitNotaryLaunchOptions.current
 
     var body: some Scene {
         MenuBarExtra {
@@ -19,10 +16,15 @@ struct GitPingsApp: App {
         Window("GitPings", id: "dashboard") {
             DashboardRootView(model: container.appModel)
                 .environment(container.appModel)
-                .task { container.appModel.start() }
+                .task {
+                    container.appModel.start(
+                        beginSignInIfNeeded: launchOptions.shouldBeginSetup,
+                        expectedGitHubLogin: launchOptions.expectedGitHubLogin
+                    )
+                }
         }
         .defaultSize(width: 960, height: 640)
-        .defaultLaunchBehavior(dashboardLaunchBehavior)
+        .defaultLaunchBehavior(.presented)
         .commands {
             OpenDashboardCommands()
         }

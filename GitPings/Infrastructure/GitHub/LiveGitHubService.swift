@@ -200,7 +200,14 @@ public actor LiveGitHubService {
             document: GraphQLQueries.pullRequestByNodeID,
             variables: ["id": .string(id.rawValue)]
         )
-        return try requireData(response).node?.asSummary(lastSuccessfulRefreshAt: Date(), isFreshMergeCalculation: true)
+        if let error = response.errors?.first {
+            if error.indicatesMissingNode { return nil }
+            throw GitPingsError.partialData(error.message)
+        }
+        guard let data = response.data else {
+            throw GitPingsError.partialData("GitHub returned no data")
+        }
+        return data.node?.asSummary(lastSuccessfulRefreshAt: Date(), isFreshMergeCalculation: true)
     }
 
     private func fetchViewer() async throws -> GitHubAccount {

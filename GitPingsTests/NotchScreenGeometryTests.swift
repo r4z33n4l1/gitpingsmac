@@ -40,6 +40,8 @@ final class NotchScreenGeometryTests: XCTestCase {
         let layout = ScreenGeometry.layout(for: metrics)
         XCTAssertEqual(layout?.mode, .notchAttached)
         XCTAssertNotNil(layout?.reservedTopCenter)
+        XCTAssertEqual(layout!.collapsedFrame.height, ScreenGeometry.notchCollapsedHeight)
+        XCTAssertEqual(layout!.collapsedFrame.maxY, reserved!.minY, accuracy: 0.5)
         // Expanded content must sit below the reserved housing band (NOTCH-10).
         XCTAssertLessThanOrEqual(layout!.expandedFrame.maxY, reserved!.minY + 0.5)
     }

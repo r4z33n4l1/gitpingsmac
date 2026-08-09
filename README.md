@@ -8,8 +8,25 @@ Target: **macOS Tahoe 26 and newer**
 
 ## Status
 
-The native MVP builds and runs on macOS Tahoe. Developer ID signing,
-notarization, and clean-teammate-Mac acceptance remain release gates.
+The native MVP builds and runs on macOS Tahoe. Version 0.1.0 is Developer ID
+signed and notarized; version 0.1.1 adds the shared GitNotary GitHub App and CLI
+onboarding flow.
+
+## Install and connect
+
+After installing GitPings, run:
+
+```bash
+gitnotary setup
+```
+
+The command verifies the account currently selected in GitHub CLI, then opens
+GitPings' own read-only GitHub Device Flow. It never prints, copies, or imports
+your `gh` token. Approve the one-time code in the browser, install GitNotary for
+the repositories you want to monitor, and select those repositories in the app.
+
+Until the Homebrew tap is published, download the signed release directly from
+[GitHub Releases](https://github.com/r4z33n4l1/gitpingsmac/releases).
 
 ## Canonical run entrypoint
 
@@ -33,8 +50,8 @@ GITPINGS_NOTARY_PROFILE="GitPingsNotary" \
 ./script/package_release.sh --notarize
 ```
 
-See the [distribution and teammate setup guide](docs/DISTRIBUTION.md) for GitHub
-App registration, installation, signing, notarization, release, and Homebrew
+See the [distribution and teammate setup guide](docs/DISTRIBUTION.md) for CLI
+onboarding, manual installation, signing, notarization, release, and Homebrew
 instructions.
 
 ## Planning documents
