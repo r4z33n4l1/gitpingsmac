@@ -20,50 +20,58 @@ the packaging pipeline before Developer ID credentials are available.
 
 ## Recipient setup
 
-### 1. Install GitPings
+### Homebrew installation
+
+Once the tap is published:
+
+```bash
+brew install --cask r4z33n4l1/gitnorary/gitpings
+gitnotary setup
+```
+
+`gitnotary setup` uses `gh auth status` and `gh api user` to identify the active
+GitHub CLI account. It does not read, print, copy, store, or import the GitHub CLI
+token. GitPings performs a separate, read-only GitHub App Device Flow and stores
+its resulting token in macOS Keychain.
+
+Useful diagnostics:
+
+```bash
+gitnotary doctor
+gitnotary open
+gitnotary version
+```
+
+### Manual installation
 
 1. Download `GitPings-<version>.zip` and its `.sha256` file from the matching
    GitHub Release.
 2. Verify the checksum with `shasum -a 256 -c GitPings-<version>.zip.sha256`.
 3. Unzip it and move `GitPings.app` to Applications.
 4. Open GitPings. Its status icon appears in the menu bar.
+5. Run the bundled helper directly once, or add it to your PATH:
+
+   ```bash
+   /Applications/GitPings.app/Contents/Resources/gitnotary setup
+   ```
 
 GitPings currently targets macOS Tahoe 26 or newer.
 
-### 2. Create a personal GitHub App
+### Authorize GitHub
 
-Until the project publishes one shared public GitHub App, each recipient creates
-their own registration:
+GitPings uses the public [GitNotary GitHub App](https://github.com/apps/gitnotary).
+No callback server, client secret, private key, Vercel project, or Convex database
+is involved.
 
-1. In GitHub, open **Settings → Developer settings → GitHub Apps → New GitHub App**.
-2. Give it a unique name and use the GitPings repository URL as the homepage.
-3. Disable webhooks; GitPings polls GitHub directly.
-4. Enable **Device Flow** under “Identifying and authorizing users.” No callback
-   URL is required by GitPings.
-5. Keep expiring user access tokens enabled.
-6. Set these repository permissions to **Read-only**:
-   - Metadata
-   - Pull requests
-   - Checks
-   - Commit statuses
-   - Contents
-7. Do not grant account or organization permissions, write permissions, or
-   subscribe to webhook events.
-8. Create the app, copy its **Client ID** (not App ID), then install the app on
-   your personal account or organization. Prefer “Only select repositories.”
+1. Install GitNotary for your account or organization and choose only the
+   repositories you want GitPings to see.
+2. Run `gitnotary setup` (or choose **Sign in with GitHub** in Settings).
+3. Approve the one-time code on GitHub's device-login page.
+4. Open the dashboard, choose **Add Repository**, and select repositories to
+   monitor.
+5. Configure filters and notifications, then pin up to five pull requests.
 
 GitHub may require an organization owner to approve the installation.
-
-### 3. Connect GitPings
-
-1. Open GitPings → Settings → Account.
-2. Paste the GitHub App Client ID. A client ID is public configuration; never
-   paste a client secret or private key into GitPings.
-3. Choose **Sign in with GitHub**, open the displayed device-login link, and
-   enter the one-time code.
-4. Open the dashboard, choose **Add Repository**, and select the repositories to
-   monitor.
-5. Configure filters and notifications in Settings, then pin up to five PRs.
 
 ## Maintainer release setup
 

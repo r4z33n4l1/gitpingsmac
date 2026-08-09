@@ -1,0 +1,32 @@
+name: macOS CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: macos-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Show toolchain
+        run: xcodebuild -version
+
+      - name: Run unit tests
+        run: >-
+          xcodebuild
+          -project GitPings.xcodeproj
+          -scheme GitPings
+          -destination 'platform=macOS'
+          CODE_SIGNING_ALLOWED=NO
+          test

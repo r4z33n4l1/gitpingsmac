@@ -79,8 +79,7 @@ final class AppModel {
         let defaults = UserDefaults.standard
         oauthClientID = ProcessInfo.processInfo.environment["GITPINGS_GITHUB_CLIENT_ID"]
             ?? (Bundle.main.object(forInfoDictionaryKey: "GitHubClientID") as? String)
-            ?? defaults.string(forKey: Keys.oauthClientID)
-            ?? ""
+            ?? GitNotaryConfiguration.clientID
         notificationsEnabled = defaults.object(forKey: Keys.notificationsEnabled) as? Bool ?? true
         newAuthoredPullRequestNotificationsEnabled = defaults.object(
             forKey: Keys.newAuthoredPullRequestNotificationsEnabled
@@ -108,6 +107,10 @@ final class AppModel {
         return account
     }
 
+    var hasBundledOAuthConfiguration: Bool {
+        !GitNotaryConfiguration.clientID.isEmpty
+    }
+
     var filteredRepositories: [RepositorySummary] {
         let query = repositorySearch.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return repositories }
@@ -124,7 +127,10 @@ final class AppModel {
         }
     }
 
-    func start() {
+    func start(
+        beginSignInIfNeeded: Bool = false,
+        expectedGitHubLogin: String? = nil
+    ) {
         guard !didStart else { return }
         didStart = true
         Task {
@@ -135,6 +141,11 @@ final class AppModel {
                     statusMessage = "Signed in as @\(account.login)"
                     try await loadRepositoriesAndRefresh()
                     startRefreshLoop()
+                } else if beginSignInIfNeeded {
+                    if let expectedGitHubLogin {
+                        statusMessage = "GitHub CLI detected @\(expectedGitHubLogin)"
+                    }
+                    beginSignIn()
                 }
             } catch {
                 authState = .needsReauthorization(reason: userFacing(error))

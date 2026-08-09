@@ -1,0 +1,135 @@
+#!/bin/zsh
+set -euo pipefail
+
+readonly APP_NAME="GitPings"
+readonly BUNDLE_ID="com.razeenali.gitpings"
+
+usage() {
+  cat <<'EOF'
+Usage: gitnotary <command>
+
+Commands:
+  setup    Verify the active GitHub CLI account and open secure GitHub setup.
+  doctor   Check GitHub CLI authentication and the GitPings installation.
+  open     Open the GitPings dashboard.
+  version  Print the installed GitPings version.
+  help     Show this help.
+
+GitNotary never prints, copies, or imports your GitHub CLI token. GitHub
+authorization is completed through GitPings' read-only GitHub App device flow.
+EOF
+}
+
+resolve_app() {
+  local candidate
+  for candidate in \
+    "${GITNOTARY_APP_PATH:-}" \
+    "/Applications/${APP_NAME}.app" \
+    "${HOME}/Applications/${APP_NAME}.app"
+  do
+    if [[ -n "$candidate" && -d "$candidate" ]]; then
+      print -r -- "$candidate"
+      return 0
+    fi
+  done
+
+  echo "GitPings.app was not found in Applications." >&2
+  echo "Install it with Homebrew, or set GITNOTARY_APP_PATH for development." >&2
+  return 1
+}
+
+require_gh_login() {
+  if ! command -v gh >/dev/null 2>&1; then
+    echo "GitHub CLI is required. Install it with: brew install gh" >&2
+    return 1
+  fi
+
+  if ! gh auth status --active --hostname github.com >/dev/null 2>&1; then
+    echo "No active github.com login was found. Starting GitHub CLI login..."
+    gh auth login --hostname github.com --web --git-protocol https
+  fi
+
+  gh auth status --active --hostname github.com >/dev/null
+}
+
+active_login() {
+  gh api --hostname github.com user --jq .login
+}
+
+setup() {
+  require_gh_login
+
+  local app_path login
+  app_path="$(resolve_app)"
+  login="$(active_login)"
+
+  if pgrep -x "$APP_NAME" >/dev/null 2>&1; then
+    echo "GitPings is already running." >&2
+    echo "Quit it from the menu bar, then run 'gitnotary setup' again." >&2
+    return 1
+  fi
+
+  echo "GitHub CLI account: @${login}"
+  echo "Opening GitPings' read-only GitHub authorization..."
+  open -n "$app_path" --args --gitnotary-setup --expected-github-login "$login"
+}
+
+doctor() {
+  local failed=0 app_path login
+
+  if command -v gh >/dev/null 2>&1; then
+    echo "[ok] GitHub CLI: $(gh --version | head -n 1)"
+  else
+    echo "[missing] GitHub CLI"
+    failed=1
+  fi
+
+  if [[ "$failed" -eq 0 ]] && gh auth status --active --hostname github.com >/dev/null 2>&1; then
+    login="$(active_login)"
+    echo "[ok] GitHub account: @${login}"
+  else
+    echo "[missing] Active github.com login"
+    failed=1
+  fi
+
+  if app_path="$(resolve_app 2>/dev/null)"; then
+    echo "[ok] Application: ${app_path}"
+    if codesign --verify --deep --strict "$app_path" >/dev/null 2>&1; then
+      echo "[ok] Code signature"
+    else
+      echo "[invalid] Code signature"
+      failed=1
+    fi
+  else
+    echo "[missing] GitPings.app"
+    failed=1
+  fi
+
+  return "$failed"
+}
+
+open_app() {
+  local app_path
+  app_path="$(resolve_app)"
+  open "$app_path"
+}
+
+version() {
+  local app_path
+  app_path="$(resolve_app)"
+  defaults read "${app_path}/Contents/Info" CFBundleShortVersionString
+}
+
+command_name="${1:-help}"
+case "$command_name" in
+  setup) setup ;;
+  doctor) doctor ;;
+  open) open_app ;;
+  version|--version|-v) version ;;
+  help|--help|-h) usage ;;
+  *)
+    echo "Unknown command: ${command_name}" >&2
+    usage >&2
+    exit 2
+    ;;
+esac

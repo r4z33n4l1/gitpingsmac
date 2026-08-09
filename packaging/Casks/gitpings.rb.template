@@ -10,6 +10,7 @@ cask "gitpings" do
   depends_on macos: ">= :tahoe"
 
   app "GitPings.app"
+  binary "#{appdir}/GitPings.app/Contents/Resources/gitnotary"
 
   zap trash: [
     "~/Library/Preferences/com.razeenali.gitpings.plist",

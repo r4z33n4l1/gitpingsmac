@@ -41,14 +41,22 @@ struct SettingsRootView: View {
             }
 
             Section("OAuth configuration") {
-                TextField("GitHub OAuth client ID", text: $model.oauthClientID)
-                    .textFieldStyle(.roundedBorder)
-                Text("GitPings uses GitHub device flow directly. The client ID is public; no client secret, callback server, or hosted database is required.")
+                if model.hasBundledOAuthConfiguration {
+                    LabeledContent("GitHub App", value: "GitNotary")
+                    Link(
+                        "Install or update repository access",
+                        destination: GitNotaryConfiguration.installationURL
+                    )
+                } else {
+                    TextField("GitHub OAuth client ID", text: $model.oauthClientID)
+                        .textFieldStyle(.roundedBorder)
+                }
+                Text("GitPings uses GitHub device flow directly. No client secret, callback server, hosted database, or GitHub CLI token is required.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Link(
-                    "GitHub App setup guide",
-                    destination: URL(string: "https://github.com/r4z33n4l1/gitpingsmac/blob/main/docs/DISTRIBUTION.md#2-create-a-personal-github-app")!
+                    "Setup guide",
+                    destination: URL(string: "https://github.com/r4z33n4l1/gitpingsmac/blob/main/docs/DISTRIBUTION.md#recipient-setup")!
                 )
             }
         }
