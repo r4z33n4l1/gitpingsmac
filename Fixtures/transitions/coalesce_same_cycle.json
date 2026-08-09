@@ -1,0 +1,22 @@
+{
+  "description": "CI and merge changes in one cycle emit one event per kind; router coalesces per PR.",
+  "baselineMode": false,
+  "previous": [
+    {
+      "id": "PR_1",
+      "ciState": "pending",
+      "mergeState": "checking",
+      "lifecycleState": "open"
+    }
+  ],
+  "current": [
+    {
+      "id": "PR_1",
+      "ciState": "passing",
+      "mergeState": "mergeable",
+      "lifecycleState": "open"
+    }
+  ],
+  "expectedEventKinds": ["ciChanged", "mergeChanged"],
+  "expectedCoalescedGroupCount": 1
+}

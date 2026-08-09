@@ -1,0 +1,46 @@
+{
+  "description": "Redacted repository discovery fixture (installation-visible repos). No tokens.",
+  "data": {
+    "viewer": {
+      "repositories": {
+        "pageInfo": {
+          "hasNextPage": false,
+          "endCursor": null
+        },
+        "nodes": [
+          {
+            "id": "REPO_PUBLIC_1",
+            "name": "public-demo",
+            "nameWithOwner": "octocat-fixture/public-demo",
+            "isPrivate": false,
+            "owner": {
+              "login": "octocat-fixture",
+              "__typename": "User"
+            }
+          },
+          {
+            "id": "REPO_PRIVATE_ORG_1",
+            "name": "private-service",
+            "nameWithOwner": "acme-fixture/private-service",
+            "isPrivate": true,
+            "owner": {
+              "login": "acme-fixture",
+              "__typename": "Organization"
+            }
+          }
+        ]
+      }
+    },
+    "rateLimit": {
+      "limit": 5000,
+      "remaining": 4995,
+      "resetAt": "2026-08-09T01:00:00Z",
+      "cost": 1
+    }
+  },
+  "restFallbackSketch": {
+    "installations": "GET /user/installations",
+    "repositories": "GET /user/installations/{installation_id}/repositories",
+    "note": "Use if GraphQL viewer.repositories does not match App installation visibility."
+  }
+}

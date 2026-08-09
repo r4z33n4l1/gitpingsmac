@@ -1,0 +1,15 @@
+{
+  "description": "Disappearance from open-PR search alone must not emit closedOrMerged (CHANGE-3A).",
+  "baselineMode": false,
+  "previous": [
+    {
+      "id": "PR_1",
+      "ciState": "passing",
+      "mergeState": "mergeable",
+      "lifecycleState": "open"
+    }
+  ],
+  "current": [],
+  "expectedEventCount": 0,
+  "note": "RefreshCoordinator must lookup before classifying; detector ignores absence."
+}

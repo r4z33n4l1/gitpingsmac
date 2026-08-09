@@ -1,0 +1,29 @@
+{
+  "description": "Redacted GitHub device-flow response shapes. No real codes or tokens.",
+  "deviceCodeResponse": {
+    "device_code": "[REDACTED]",
+    "user_code": "[REDACTED]",
+    "verification_uri": "https://github.com/login/device",
+    "expires_in": 900,
+    "interval": 5
+  },
+  "pollPending": {
+    "error": "authorization_pending",
+    "error_description": "The authorization request is still pending."
+  },
+  "pollSlowDown": {
+    "error": "slow_down",
+    "error_description": "Polling too frequently; increase interval."
+  },
+  "pollSuccess": {
+    "access_token": "[REDACTED]",
+    "refresh_token": "[REDACTED]",
+    "token_type": "bearer",
+    "expires_in": 28800,
+    "scope": ""
+  },
+  "notes": [
+    "Never commit live device_code, user_code, access_token, or refresh_token values.",
+    "Accept: application/json on token endpoint."
+  ]
+}

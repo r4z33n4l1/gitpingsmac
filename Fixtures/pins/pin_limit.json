@@ -1,0 +1,13 @@
+{
+  "description": "Pin policy fixture for hard limit of five with explicit replacement.",
+  "maximumPinCount": 5,
+  "silentEvictionAllowed": false,
+  "initialPins": ["PR_1", "PR_2", "PR_3", "PR_4", "PR_5"],
+  "attemptPin": "PR_6",
+  "expectedError": "pinLimitReached",
+  "replacement": {
+    "existing": "PR_1",
+    "with": "PR_6",
+    "expectedOrder": ["PR_6", "PR_2", "PR_3", "PR_4", "PR_5"]
+  }
+}

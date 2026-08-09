@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "documentPurpose": "feasibility-permission-plan",
+  "product": "GitPings",
+  "githubApp": {
+    "visibility": "public",
+    "authentication": "oauth_device_flow_user_to_server",
+    "shipsClientSecret": false,
+    "shipsPrivateKey": false,
+    "callbackURLRequired": false,
+    "expiringUserTokens": true
+  },
+  "repositoryPermissions": {
+    "metadata": "read",
+    "pull_requests": "read",
+    "checks": "read",
+    "statuses": "read",
+    "contents": "read"
+  },
+  "accountPermissions": {},
+  "explicitlyDenied": [
+    "pull_requests:write",
+    "contents:write",
+    "checks:write",
+    "administration",
+    "workflows:write",
+    "secrets",
+    "environments",
+    "members:write"
+  ],
+  "notes": [
+    "All product operations are read-only (AUTH-4).",
+    "contents:read is listed conservatively pending live GraphQL confirmation on a private org repo.",
+    "User-to-server tokens are limited by user access ∩ App installation selection.",
+    "No webhook events are required for MVP polling."
+  ]
+}

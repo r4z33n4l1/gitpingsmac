@@ -1,0 +1,28 @@
+{
+  "description": "Normalized CI state change emits exactly one ciChanged event.",
+  "baselineMode": false,
+  "previous": [
+    {
+      "id": "PR_1",
+      "ciState": "pending",
+      "mergeState": "mergeable",
+      "lifecycleState": "open"
+    }
+  ],
+  "current": [
+    {
+      "id": "PR_1",
+      "ciState": "passing",
+      "mergeState": "mergeable",
+      "lifecycleState": "open"
+    }
+  ],
+  "expectedEvents": [
+    {
+      "pullRequestID": "PR_1",
+      "kind": "ciChanged",
+      "oldValue": "pending",
+      "newValue": "passing"
+    }
+  ]
+}

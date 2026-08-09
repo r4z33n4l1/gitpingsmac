@@ -1,0 +1,26 @@
+# Codex / local agent Run action for GitPings.
+# Canonical entry point matches AGENTS.md and docs/EXECUTION_PLAN.md.
+
+[environment]
+name = "gitpings-macos"
+description = "Native Swift 6 macOS Tahoe 26 GitPings workspace"
+
+[actions.run]
+description = "Kill, build, and launch GitPings"
+command = "./script/build_and_run.sh"
+
+[actions.debug]
+description = "Build and launch with GITPINGS_DEBUG=1"
+command = "./script/build_and_run.sh --debug"
+
+[actions.logs]
+description = "Build, launch, and stream GitPings unified logs"
+command = "./script/build_and_run.sh --logs"
+
+[actions.telemetry]
+description = "Build and launch with local telemetry markers enabled"
+command = "./script/build_and_run.sh --telemetry"
+
+[actions.verify]
+description = "Clean build, unit tests, brief launch, Gate 0 evidence"
+command = "./script/build_and_run.sh --verify"
