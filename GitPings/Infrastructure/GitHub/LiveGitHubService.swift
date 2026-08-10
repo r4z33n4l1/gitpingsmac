@@ -13,6 +13,7 @@ public actor LiveGitHubService {
     private var pendingDeviceCode: String?
     private var pendingPollInterval: TimeInterval = 5
     private var oauthClientID: String
+    private var authenticationMethod: GitHubAuthenticationMethod = .githubApp
 
     public init(
         tokenStore: any KeychainTokenStore = MacKeychainTokenStore(),
@@ -28,9 +29,24 @@ public actor LiveGitHubService {
         oauthClientID = clientID.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    public func configureAuthenticationMethod(_ method: GitHubAuthenticationMethod) {
+        guard method != authenticationMethod else { return }
+        authenticationMethod = method
+        accessToken = nil
+        refreshToken = nil
+        currentAccount = nil
+        clearPendingFlow()
+    }
+
     /// Restore either the app's Keychain session or a development-only token
     /// supplied in the process environment. Environment tokens are never saved.
     public func restoreSession() async throws -> GitHubAccount? {
+        if authenticationMethod == .githubCLI {
+            let account = try await fetchViewer()
+            currentAccount = account
+            return account
+        }
+
         if let environmentToken = ProcessInfo.processInfo.environment["GITPINGS_GITHUB_TOKEN"],
            !environmentToken.isEmpty
         {
@@ -69,6 +85,11 @@ public actor LiveGitHubService {
     }
 
     public func beginDeviceFlow() async throws -> DeviceAuthorizationResponse {
+        guard authenticationMethod == .githubApp else {
+            throw GitPingsError.unsupportedConfiguration(
+                "GitHub CLI authentication does not use GitHub's device flow."
+            )
+        }
         let client = URLSessionDeviceFlowClient(clientID: oauthClientID, session: urlSession)
         let response = try await client.requestDeviceCode()
         pendingDeviceCode = response.deviceCode
@@ -77,6 +98,11 @@ public actor LiveGitHubService {
     }
 
     public func pollDeviceFlow() async throws -> AuthSessionState {
+        guard authenticationMethod == .githubApp else {
+            throw GitPingsError.unsupportedConfiguration(
+                "GitHub CLI authentication does not use GitHub's device flow."
+            )
+        }
         guard let pendingDeviceCode else {
             throw GitPingsError.unsupportedConfiguration("No GitHub sign-in is pending")
         }
@@ -126,10 +152,14 @@ public actor LiveGitHubService {
     }
 
     public func signOut() async throws {
-        if let account = currentAccount {
-            try await tokenStore.deleteTokens(for: account.id)
+        if authenticationMethod == .githubApp {
+            let accountID = currentAccount?.id
+                ?? UserDefaults.standard.string(forKey: Self.activeAccountKey).map { GitHubNodeID($0) }
+            if let accountID {
+                try await tokenStore.deleteTokens(for: accountID)
+            }
+            UserDefaults.standard.removeObject(forKey: Self.activeAccountKey)
         }
-        UserDefaults.standard.removeObject(forKey: Self.activeAccountKey)
         accessToken = nil
         refreshToken = nil
         currentAccount = nil
@@ -224,6 +254,15 @@ public actor LiveGitHubService {
         variables: [String: JSONValue],
         mayRefreshToken: Bool = true
     ) async throws -> GraphQLResponse<Response> {
+        let requestBody = try JSONEncoder().encode(
+            GraphQLRequest(query: document, variables: variables)
+        )
+
+        if authenticationMethod == .githubCLI {
+            let data = try await GitHubCLITransport().executeGraphQL(requestBody: requestBody)
+            return try JSONDecoder().decode(GraphQLResponse<Response>.self, from: data)
+        }
+
         guard let accessToken, !accessToken.isEmpty else { throw GitPingsError.notAuthenticated }
         var request = URLRequest(url: GraphQLQueries.endpoint)
         request.httpMethod = "POST"
@@ -231,7 +270,7 @@ public actor LiveGitHubService {
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
-        request.httpBody = try JSONEncoder().encode(GraphQLRequest(query: document, variables: variables))
+        request.httpBody = requestBody
         let (data, response) = try await urlSession.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw GitPingsError.networkUnavailable }
         if http.statusCode == 401, mayRefreshToken, let refreshToken {

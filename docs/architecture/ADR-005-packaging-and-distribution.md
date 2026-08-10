@@ -26,8 +26,11 @@ Distribute outside the Mac App Store using:
 - An Apple Developer Program team.
 - Developer ID Application signing.
 - Hardened Runtime.
-- App Sandbox unless an implementation spike finds a concrete incompatibility.
-- The minimum entitlements, expected to include outgoing network access for GitHub. Exact release entitlements are inspected rather than assumed.
+- No App Sandbox for the independently distributed build. Local GitHub CLI mode
+  must execute the user's Homebrew-installed `gh` binary, which Apple does not
+  permit from an App Sandbox container. Hardened Runtime and notarization remain
+  mandatory.
+- The minimum release entitlements, inspected rather than assumed.
 - Apple notarization using current Xcode Organizer or notarytool.
 - A stapled notarization ticket.
 - A versioned ZIP or DMG containing GitPings.app.
@@ -123,6 +126,7 @@ A release is not ready until:
 - Release signing uses Developer ID Application, not development/ad hoc signing.
 - Hardened Runtime is present.
 - Entitlements are minimal and inspected.
+- App Sandbox is absent by documented design so Local GitHub CLI mode can execute `gh`.
 - Notarization succeeds and its ticket is stapled.
 - Gatekeeper accepts the packaged app.
 - Authentication, Keychain, polling, launch at login, menu bar, and notch behavior survive the Release build.

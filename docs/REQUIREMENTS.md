@@ -25,7 +25,7 @@ GitPings should answer three questions at a glance:
 ## 3. Goals
 
 - Authenticate one GitHub.com user securely.
-- Support public and private repositories the installed GitHub App is permitted to read.
+- Support public and private repositories visible to the selected authentication method.
 - Let the user select and deselect repositories.
 - Let the user configure which open PRs are included using GitHub-compatible filter concepts.
 - Show CI and mergeability status for each tracked PR.
@@ -104,24 +104,26 @@ CI and merge state must remain separate. “CI passing” does not imply “merg
 
 ### AUTH — GitHub authentication
 
-- AUTH-1: The first launch presents “Sign in with GitHub.”
-- AUTH-2: Authentication uses a registered public GitHub App and GitHub’s OAuth device flow.
-- AUTH-2A: The device flow communicates directly between the Mac app and GitHub and requires no GitPings callback URL or callback server.
-- AUTH-3: The onboarding explains that the GitHub App must be installed for the repositories or organizations the user wants to monitor.
-- AUTH-4: The app requests read-only GitHub App permissions needed for repository metadata, pull requests, checks, and commit statuses.
-- AUTH-5: Access and refresh tokens are stored only in macOS Keychain.
+- AUTH-1: The first launch presents a choice between Local GitHub CLI and GitNotary GitHub App authentication.
+- AUTH-2: Local GitHub CLI is recommended for local use and invokes only read-only `gh api graphql` queries using the active `github.com` account.
+- AUTH-2A: GitPings never asks `gh` to print/export its token and never copies, imports, logs, or persists that token.
+- AUTH-2B: GitNotary GitHub App mode uses the registered public GitHub App and GitHub OAuth device flow, directly between the Mac and GitHub without a callback server.
+- AUTH-3: Onboarding explains that CLI access follows the existing GitHub CLI credential and organization policy, while GitHub App mode requires installation for selected repositories and may require organization approval.
+- AUTH-4: GitHub App mode requests only the read-only permissions needed for repository metadata, pull requests, checks, and commit statuses. CLI mode performs read operations only even if the user's existing CLI credential is broader.
+- AUTH-5: GitHub App access/refresh tokens are stored only in macOS Keychain. GitHub CLI credentials remain owned by `gh` and are never stored by GitPings.
 - AUTH-6: The app never embeds a GitHub client secret or GitHub App private key.
-- AUTH-7: Revoked, expired, or insufficient authorization produces a recoverable sign-in state rather than silently showing an empty list.
-- AUTH-8: Signing out removes tokens and locally cached private repository/PR data after confirmation. User preferences that contain no GitHub data may remain.
+- AUTH-7: Missing CLI, revoked/expired credentials, or insufficient authorization produces a recoverable connection state rather than silently showing an empty list.
+- AUTH-8: Disconnecting removes GitPings' provider session and locally cached private repository/PR data after confirmation. It never signs the user out of GitHub CLI itself.
+- AUTH-9: Settings shows the active method and allows switching. Switching disconnects the previous provider, clears private cached data/selections/pins, and establishes fresh status and authored-PR baselines.
 
 ### REPO — Repository selection
 
-- REPO-1: After sign-in, the user can browse repositories available through their GitHub App installations.
+- REPO-1: After connecting, the user can browse repositories visible through the selected authentication method.
 - REPO-2: The repository picker supports search by owner and repository name.
 - REPO-3: The list visually distinguishes public/private and personal/organization repositories.
 - REPO-4: Repository selection persists locally.
-- REPO-5: Repositories removed from an installation become unavailable and their tracked PRs are removed from active views.
-- REPO-6: The empty state explains how to install or update GitHub App repository access.
+- REPO-5: Repositories that become inaccessible through the active method are removed from active views.
+- REPO-6: The empty state explains how to repair GitHub CLI/SSO access or update GitHub App repository access, as applicable.
 
 ### FILTER — Configurable PR inclusion
 
@@ -214,6 +216,7 @@ CI and merge state must remain separate. “CI passing” does not imply “merg
 - NOTIFY-7: A notification click opens the PR on GitHub.
 - NOTIFY-8: Notification text contains no source code, comments, or other repository content beyond repository name, PR number/title, and state transition.
 - NOTIFY-9: The app provides a direct notch-preview action in both the dashboard toolbar and Settings. Testing does not alter preferences, transition history, or menu-bar status.
+- NOTIFY-9A: Settings provides a multi-PR queue preview that proves distinct PR alerts remain ordered locally and advance after the current alert dismisses.
 
 ### NOTCH — Notch presentation
 
@@ -254,8 +257,8 @@ CI and merge state must remain separate. “CI passing” does not imply “merg
 
 1. Launch GitPings.
 2. Read a concise privacy/read-only explanation.
-3. Sign in with GitHub using the device flow.
-4. Install or authorize the GitHub App for selected accounts/repositories.
+3. Choose Local GitHub CLI (recommended) or GitNotary GitHub App.
+4. Connect the active `gh` account, or complete GitHub App device flow and installation.
 5. Choose repositories.
 6. Choose PR filters; default to Authored by me, Assigned to me, and Review requested from me.
 7. Enable launch at login.
@@ -277,7 +280,7 @@ CI and merge state must remain separate. “CI passing” does not imply “merg
 1. A refresh receives an authentication/permission failure.
 2. GitPings keeps the last cache but marks it stale.
 3. The menu and dashboard show “Reauthorize GitHub.”
-4. The user signs in or updates the GitHub App installation.
+4. The user repairs GitHub CLI/SSO access or reauthorizes/updates the GitHub App installation.
 5. Refresh resumes and establishes baselines for newly visible PRs.
 
 ## 9. Local data
@@ -295,7 +298,8 @@ GitPings stores locally:
 
 Secrets:
 
-- Access and refresh tokens live in Keychain only.
+- GitHub App access and refresh tokens live in Keychain only.
+- GitHub CLI tokens stay under `gh` ownership and are never requested or persisted by GitPings.
 - No client secret or GitHub App private key is shipped.
 - Logs must redact tokens, authorization headers, device codes, and private API payloads.
 
@@ -328,12 +332,12 @@ GitPings does not send data through a developer-operated service. Vercel and Con
 
 ### Privacy and security
 
-- Read-only GitHub App repository permissions.
-- Keychain-backed token storage.
+- Read-only operations for both methods; fine-grained read-only GitHub App repository permissions.
+- Keychain-backed GitHub App token storage; no GitHub CLI token export.
 - HTTPS only.
 - No analytics, crash upload, or backend in MVP.
 - No notification content beyond metadata required to identify the PR and transition.
-- App Sandbox and Hardened Runtime enabled for release builds unless a documented implementation constraint requires reconsideration.
+- Hardened Runtime is enabled. App Sandbox is disabled only because Local GitHub CLI mode must execute the user-installed `gh` binary; the tradeoff is documented in ADR-002 and ADR-005.
 
 ### Accessibility
 
@@ -347,8 +351,8 @@ GitPings does not send data through a developer-operated service. Vercel and Con
 
 The MVP is acceptable when all of the following are demonstrated on macOS 26:
 
-1. A user signs into one GitHub.com account without entering a PAT.
-2. The app lists repositories granted to the GitHub App, including a private repository in a test organization.
+1. A user connects one GitHub.com account through Local GitHub CLI or GitHub App without entering a PAT.
+2. The app lists repositories available through the chosen method, including a private repository in a test organization.
 3. The user selects repositories and enables a configurable combination of the four defined PR filters.
 4. Open matching PRs appear with normalized CI and merge states.
 5. The user pins, reorders, and unpins PRs, and cannot exceed five without choosing a replacement.
@@ -367,6 +371,7 @@ The MVP is acceptable when all of the following are demonstrated on macOS 26:
 
 ### Phase 0 — Technical spikes
 
+- Prove Local GitHub CLI GraphQL transport without exporting or persisting its token.
 - Register a development GitHub App and verify the minimum read-only permissions.
 - Prove device-flow sign-in and Keychain token refresh.
 - Prove a GraphQL query that returns selected-filter PRs, status-check rollup, mergeable, and merge-state status.

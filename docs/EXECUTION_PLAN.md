@@ -46,7 +46,7 @@ These defaults prevent agents from making inconsistent local choices. They can b
 | Bundle identifier | com.razeenali.gitpings |
 | Platform | macOS Tahoe 26+ |
 | Account model | One GitHub.com account per local app installation |
-| Runtime boundary | Mac app directly to GitHub; local Keychain/SwiftData only |
+| Runtime boundary | Mac app directly to GitHub through `gh` or HTTPS; local Keychain/SwiftData only |
 | Polling target | 60 seconds while running, subject to backoff |
 | Pin limit | Five, with explicit replacement |
 | Closed/merged pin behavior | Notify once, then automatically remove from pins |
@@ -64,7 +64,7 @@ Use four concurrent slots:
 | Role | Responsibility |
 | --- | --- |
 | Orchestrator / Integrator | Owns plan, project files, contracts, dependency wiring, integration, gates, traceability, and release |
-| GitHub Platform Agent | Owns device auth, Keychain, repository discovery, GraphQL/search, pagination, normalization inputs, and rate metadata |
+| GitHub Platform Agent | Owns CLI/device auth, Keychain, repository discovery, GraphQL/search, pagination, normalization inputs, and rate metadata |
 | Monitoring Core Agent | Owns SwiftData, pins, cache, polling, transition detection, deduplication, and notification routing |
 | macOS Experience Agent | Owns onboarding/dashboard/menu/settings views, AppKit notch bridge, system notification UI, launch-at-login UI, and UI tests |
 
@@ -210,8 +210,8 @@ Owner: GitHub Platform Agent
 
 Prove:
 
-- Development GitHub App device flow with no callback server or shipped secret.
-- Access/refresh token lifecycle and Keychain storage.
+- Local GitHub CLI transport with no token export, plus GitHub App device flow with no callback server or shipped secret.
+- GitHub App access/refresh token lifecycle and Keychain storage.
 - Public and approved private organization repository discovery.
 - Required read-only permissions.
 - Configurable filter queries with GitHub search semantics.
@@ -243,7 +243,7 @@ Prove:
 
 - SwiftData schema version 1 for selections, pins, PR cache, snapshots, settings, and bounded history.
 - Deterministic normalization/diff fixtures and injected clock/network interfaces.
-- Sandbox compatibility with GitHub HTTPS, Keychain, SMAppService, and the panel.
+- Hardened Runtime compatibility with GitHub HTTPS/CLI, Keychain, SMAppService, and the panel; document the App Sandbox incompatibility of launching external `gh`.
 - Developer ID/Hardened Runtime configuration requirements without claiming an unsigned spike is release-ready.
 
 #### Gate 0 — Feasibility and contract freeze
@@ -391,11 +391,11 @@ Evidence includes recordings, panel-frame telemetry, focus telemetry, and an iss
 
 Verify:
 
-- Read-only GitHub App permission export.
-- Keychain-only tokens and verified sign-out deletion.
+- Read-only GitHub App permission export and a read-only CLI query inventory.
+- Keychain-only GitHub App tokens, no CLI token export, and verified disconnect deletion.
 - No token, header, device code, secret, private key, PAT, or private payload in source, fixtures, logs, defaults, SwiftData, built resources, or notifications.
 - HTTPS/approved GitHub endpoint inventory and external URL validation.
-- Minimal App Sandbox/release entitlements.
+- Minimal release entitlements and documented absence of App Sandbox for Local GitHub CLI execution.
 - No get-task-allow in Release.
 - No analytics, backend, Vercel, or Convex dependency.
 - Dependency inventory is reviewed and locked.

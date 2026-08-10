@@ -9,9 +9,10 @@ Target: **macOS Tahoe 26 and newer**
 ## Status
 
 The native MVP builds and runs on macOS Tahoe. Version 0.1.1 is Developer ID
-signed and notarized. Version 0.1.2 is the current release candidate, adding
-notch-attached spring animation, dashboard testing controls, consistent CI and
-merge status copy, terminal-PR auto-unpinning, and visible version/build details.
+signed and notarized. Version 0.2.0 is the current release candidate, adding
+selectable local GitHub CLI/GitHub App authentication, queued notch alerts,
+Pinned/Recent menu tabs, dashboard testing controls, and visible version/build
+details.
 
 ## Install and connect
 
@@ -19,16 +20,18 @@ Want an AI agent to guide the installation? Give it
 [AGENT_SETUP.md](AGENT_SETUP.md), which includes a copy-paste prompt, safety
 rules, the complete setup flow, verification commands, and troubleshooting.
 
-After installing GitPings, run:
+Install GitPings and connect the GitHub CLI account already on the Mac:
 
 ```bash
+brew install --cask r4z33n4l1/gitnorary/gitpings
 gitnotary setup
 ```
 
-The command verifies the account currently selected in GitHub CLI, then opens
-GitPings' own read-only GitHub Device Flow. It never prints, copies, or imports
-your `gh` token. Approve the one-time code in the browser, install GitNotary for
-the repositories you want to monitor, and select those repositories in the app.
+The command verifies the account selected in GitHub CLI and opens GitPings in
+Local GitHub CLI mode. GitPings invokes read-only `gh api graphql` queries; it
+never prints, copies, imports, or stores the CLI token. Select repositories in
+the app after it opens. Users who prefer fine-grained, selected-repository
+permissions can choose **GitNotary GitHub App** in Settings → Account.
 
 Until the Homebrew tap is published, download the signed release directly from
 [GitHub Releases](https://github.com/r4z33n4l1/gitpingsmac/releases).
@@ -76,6 +79,6 @@ instructions.
 ## Architecture boundaries
 
 - Direct Mac-to-GitHub communication only (no Vercel, Convex, callback server, webhooks, or APNs backend).
-- Keychain for tokens; SwiftData for non-secret local state.
-- Read-only GitHub App permissions and OAuth device flow.
+- Local GitHub CLI or read-only GitHub App authentication, selectable in Settings.
+- GitHub CLI credentials stay owned by `gh`; GitHub App tokens use Keychain.
 - Public macOS APIs only for menu-bar and notch/fallback notifications.

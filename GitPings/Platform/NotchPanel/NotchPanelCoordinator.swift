@@ -81,6 +81,7 @@ public final class NotchPanelCoordinator: NotchPresenting {
     private var isScreenLocked: Bool = false
     private var isTargetFullScreen: Bool = false
     private var currentEvents: [TransitionEvent] = []
+    private var eventQueue = NotchEventQueue()
     private var dismissalTask: Task<Void, Never>?
     private var presentationGeneration = 0
     private var countdownStartedAt: TimeInterval = 0
@@ -150,14 +151,29 @@ public final class NotchPanelCoordinator: NotchPresenting {
         guard !isScreenLocked else { return }
         if options.suppressWhenFullScreen, isTargetFullScreen { return }
 
-        currentEvents = Array(events.prefix(3))
-        let overflow = max(0, events.count - currentEvents.count)
+        eventQueue.enqueue(events, excluding: currentEvents)
+        guard currentEvents.isEmpty else { return }
+        await presentNextQueuedGroup()
+    }
 
-        guard let metrics = metricsProvider() else { return }
+    private func presentNextQueuedGroup() async {
+        guard let nextEvents = eventQueue.popFirst() else { return }
+        currentEvents = nextEvents
+        await presentCurrentGroup()
+    }
+
+    private func presentCurrentGroup() async {
+        guard let metrics = metricsProvider() else {
+            currentEvents = []
+            await presentNextQueuedGroup()
+            return
+        }
         guard let layout = ScreenGeometry.layout(
             for: metrics,
             fallbackEnabled: options.fallbackEnabled
         ) else {
+            currentEvents = []
+            await presentNextQueuedGroup()
             return
         }
         presentationGeneration += 1
@@ -173,7 +189,7 @@ public final class NotchPanelCoordinator: NotchPresenting {
 
         let content = NotchEventContentView(
             events: currentEvents,
-            overflowCount: overflow,
+            overflowCount: eventQueue.count,
             mode: layout.mode,
             notchStemWidth: layout.reservedTopCenter?.width ?? 0,
             notchStemHeight: layout.reservedTopCenter?.height ?? 0,
@@ -219,7 +235,6 @@ public final class NotchPanelCoordinator: NotchPresenting {
         callbacks.onFocusTelemetry?(telemetry)
         #else
         _ = layout
-        _ = overflow
         #endif
     }
 
@@ -243,6 +258,12 @@ public final class NotchPanelCoordinator: NotchPresenting {
         #endif
         currentEvents = []
         callbacks.onDismissalCompleted?()
+        if !eventQueue.isEmpty, !isScreenLocked,
+           !(options.suppressWhenFullScreen && isTargetFullScreen)
+        {
+            try? await Task.sleep(for: .milliseconds(120))
+            await presentNextQueuedGroup()
+        }
     }
 
     private func scheduleDismiss(after delay: TimeInterval) {
@@ -290,6 +311,7 @@ public final class NotchPanelCoordinator: NotchPresenting {
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.isScreenLocked = true
+                self?.eventQueue.removeAll()
                 await self?.dismiss()
             }
         }
@@ -367,7 +389,7 @@ public final class NotchPanelCoordinator: NotchPresenting {
 
     private func recomputeFrameIfVisible() async {
         guard let panel, panel.isVisible, !currentEvents.isEmpty else { return }
-        await present(events: currentEvents)
+        await presentCurrentGroup()
     }
     #endif
 }

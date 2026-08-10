@@ -123,7 +123,7 @@ public struct NotchEventContentView: View {
                         .font(.system(size: 13, weight: .semibold))
                         .lineLimit(1)
                         .truncationMode(.tail)
-                    Text(NotchEventPresentation.transitionLine(for: event))
+                    Text(NotchEventPresentation.transitionLine(for: events))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(NotchEventPresentation.tint(for: event))
                         .lineLimit(1)
@@ -136,20 +136,15 @@ public struct NotchEventContentView: View {
     }
 
     private var queueSummary: String {
-        let visibleExtras = max(0, events.count - 1)
-        let remaining = visibleExtras + overflowCount
-        if remaining <= 0 { return "" }
-        if overflowCount > 0 {
-            return "+\(remaining) more"
-        }
-        return "\(events.count) queued"
+        guard overflowCount > 0 else { return "" }
+        return overflowCount == 1 ? "1 queued" : "\(overflowCount) queued"
     }
 
     private var accessibilitySummary: String {
         guard let primary = events.first else { return "GitPings notification" }
         var parts = [
             NotchEventPresentation.identityLine(for: primary),
-            NotchEventPresentation.transitionLine(for: primary),
+            NotchEventPresentation.transitionLine(for: events),
         ]
         if !queueSummary.isEmpty {
             parts.append(queueSummary)
@@ -255,6 +250,12 @@ public enum NotchEventPresentation {
             }
             return "Lifecycle \(event.newValue)"
         }
+    }
+
+    public static func transitionLine(for events: [TransitionEvent]) -> String {
+        let phrases = events.map(transitionLine(for:))
+        var seen: Set<String> = []
+        return phrases.filter { seen.insert($0).inserted }.joined(separator: " · ")
     }
 
     public static func compactIdentityLine(for event: TransitionEvent) -> String {

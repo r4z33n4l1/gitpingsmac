@@ -9,14 +9,14 @@ usage() {
 Usage: gitnotary <command>
 
 Commands:
-  setup    Verify the active GitHub CLI account and open secure GitHub setup.
+  setup    Connect GitPings to the active local GitHub CLI account.
   doctor   Check GitHub CLI authentication and the GitPings installation.
   open     Open the GitPings dashboard.
   version  Print the installed GitPings version.
   help     Show this help.
 
-GitNotary never prints, copies, or imports your GitHub CLI token. GitHub
-authorization is completed through GitPings' read-only GitHub App device flow.
+GitPings never prints, copies, or imports your GitHub CLI token. It invokes
+read-only `gh api graphql` commands using the existing local GitHub CLI session.
 EOF
 }
 
@@ -70,8 +70,11 @@ setup() {
   fi
 
   echo "GitHub CLI account: @${login}"
-  echo "Opening GitPings' read-only GitHub authorization..."
-  open -n "$app_path" --args --gitnotary-setup --expected-github-login "$login"
+  echo "Opening GitPings with Local GitHub CLI authentication..."
+  open -n "$app_path" --args \
+    --gitnotary-setup \
+    --authentication-method githubCLI \
+    --expected-github-login "$login"
 }
 
 doctor() {
@@ -87,6 +90,12 @@ doctor() {
   if [[ "$failed" -eq 0 ]] && gh auth status --active --hostname github.com >/dev/null 2>&1; then
     login="$(active_login)"
     echo "[ok] GitHub account: @${login}"
+    if gh api --hostname github.com graphql -f query='{viewer{login}}' --silent >/dev/null 2>&1; then
+      echo "[ok] GitHub GraphQL access"
+    else
+      echo "[invalid] GitHub GraphQL access"
+      failed=1
+    fi
   else
     echo "[missing] Active github.com login"
     failed=1

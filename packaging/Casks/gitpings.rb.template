@@ -8,6 +8,7 @@ cask "gitpings" do
   homepage "https://github.com/r4z33n4l1/gitpingsmac"
 
   depends_on macos: ">= :tahoe"
+  depends_on formula: "gh"
 
   app "GitPings.app"
   binary "#{appdir}/GitPings.app/Contents/Resources/gitnotary"

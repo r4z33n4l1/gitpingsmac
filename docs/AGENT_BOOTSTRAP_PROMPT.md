@@ -26,12 +26,12 @@ Read these files completely, in this order, before editing:
 
 Core objective:
 
-Build and finish GitPings: a native Swift 6 menu-bar utility for macOS Tahoe 26+ that authenticates one GitHub.com account using a GitHub App OAuth device flow, lets the user select repositories and configurable PR filters, shows CI and mergeability, pins at most five PRs, polls every minute with safe backoff, and presents state changes through the menu bar and a transient notch/fallback notification.
+Build and finish GitPings: a native Swift 6 menu-bar utility for macOS Tahoe 26+ that authenticates one GitHub.com account using selectable Local GitHub CLI or GitHub App OAuth device flow, lets the user select repositories and configurable PR filters, shows CI and mergeability, pins at most five PRs, polls every minute with safe backoff, and presents state changes through the menu bar and a transient notch/fallback notification.
 
 Hard boundaries:
 
 - Direct Mac-to-GitHub communication only.
-- Store tokens in Keychain and app state locally.
+- Keep GitHub CLI credentials owned by `gh`; store only GitHub App tokens in Keychain and app state locally.
 - No Vercel, Convex, callback server, backend, webhooks, or APNs service.
 - Read-only GitHub permissions and operations.
 - No PAT, embedded client secret, or GitHub App private key.
@@ -64,7 +64,7 @@ Begin with Wave 0 and Wave 1 only:
 9. Gather Gate 0 evidence under artifacts/verification/<commit>/gate-0, excluding secrets and private payloads.
 10. Stop before production feature implementation if any Gate 0 feasibility condition remains unproven.
 
-GitHub App registration, organization installation approval, Apple Developer credentials, private test repositories, notched hardware, and a clean teammate Mac are external prerequisites. Continue with mocks and deterministic fixtures when one is unavailable, and report the exact decision or access needed.
+GitHub CLI authentication or GitHub App registration/organization approval, Apple Developer credentials, private test repositories, notched hardware, and a clean teammate Mac are external prerequisites. Continue with mocks and deterministic fixtures when one is unavailable, and report the exact decision or access needed.
 
 Execution expectations:
 

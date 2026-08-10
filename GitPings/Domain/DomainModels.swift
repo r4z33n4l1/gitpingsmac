@@ -23,6 +23,24 @@ public struct GitHubAccount: Hashable, Sendable, Codable {
     }
 }
 
+/// The credential source GitPings uses for GitHub API requests.
+///
+/// GitHub CLI mode never asks `gh` to reveal its token. GitPings executes
+/// read-only `gh api graphql` queries and consumes only the JSON response.
+public enum GitHubAuthenticationMethod: String, Hashable, Sendable, Codable, CaseIterable, Identifiable {
+    case githubCLI
+    case githubApp
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .githubCLI: "Local GitHub CLI"
+        case .githubApp: "GitNotary GitHub App"
+        }
+    }
+}
+
 public enum RepositoryVisibility: String, Hashable, Sendable, Codable {
     case `public`
     case `private`

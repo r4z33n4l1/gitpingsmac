@@ -16,6 +16,7 @@ final class GitNotaryLaunchOptionsTests: XCTestCase {
 
         XCTAssertTrue(options.shouldBeginSetup)
         XCTAssertNil(options.expectedGitHubLogin)
+        XCTAssertNil(options.preferredAuthenticationMethod)
     }
 
     func testExpectedLoginIsParsedWithoutReadingCredentials() {
@@ -29,6 +30,27 @@ final class GitNotaryLaunchOptionsTests: XCTestCase {
         XCTAssertEqual(options.expectedGitHubLogin, "octocat")
     }
 
+    func testSetupCanSelectLocalGitHubCLIAuthentication() {
+        let options = GitNotaryLaunchOptions(arguments: [
+            "GitPings",
+            "--gitnotary-setup",
+            "--authentication-method",
+            "githubCLI",
+        ])
+
+        XCTAssertEqual(options.preferredAuthenticationMethod, .githubCLI)
+    }
+
+    func testUnknownAuthenticationMethodIsIgnored() {
+        let options = GitNotaryLaunchOptions(arguments: [
+            "GitPings",
+            "--authentication-method",
+            "unknown-provider",
+        ])
+
+        XCTAssertNil(options.preferredAuthenticationMethod)
+    }
+
     func testMissingExpectedLoginValueIsIgnored() {
         let options = GitNotaryLaunchOptions(arguments: [
             "GitPings",
@@ -37,5 +59,6 @@ final class GitNotaryLaunchOptionsTests: XCTestCase {
 
         XCTAssertFalse(options.shouldBeginSetup)
         XCTAssertNil(options.expectedGitHubLogin)
+        XCTAssertNil(options.preferredAuthenticationMethod)
     }
 }

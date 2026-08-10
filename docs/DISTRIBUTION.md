@@ -1,8 +1,9 @@
 # GitPings distribution and teammate setup
 
-GitPings is a client-only macOS app. It talks directly to GitHub, stores tokens
-in Keychain, and does not require a hosted callback, Vercel project, Convex
-database, client secret, or GitHub App private key.
+GitPings is a client-only macOS app. It talks directly to GitHub through either
+the locally installed GitHub CLI or a GitHub App device-flow session. It does
+not require a hosted callback, Vercel project, Convex database, client secret,
+or GitHub App private key.
 
 ## What can be shared
 
@@ -10,7 +11,7 @@ The teammate release is:
 
 - a universal `arm64` + `x86_64` Release build;
 - signed with **Developer ID Application**;
-- protected by Hardened Runtime and App Sandbox;
+- protected by Hardened Runtime;
 - notarized by Apple with a stapled ticket;
 - packaged as `GitPings-<version>.zip` with a SHA-256 checksum; and
 - installable directly or through the generated Homebrew Cask.
@@ -29,10 +30,9 @@ brew install --cask r4z33n4l1/gitnorary/gitpings
 gitnotary setup
 ```
 
-`gitnotary setup` uses `gh auth status` and `gh api user` to identify the active
-GitHub CLI account. It does not read, print, copy, store, or import the GitHub CLI
-token. GitPings performs a separate, read-only GitHub App Device Flow and stores
-its resulting token in macOS Keychain.
+`gitnotary setup` uses the active GitHub CLI account and selects Local GitHub CLI
+authentication. GitPings invokes read-only `gh api graphql` commands and never
+asks `gh` to print or export its token. The token remains owned by GitHub CLI.
 
 Useful diagnostics:
 
@@ -57,21 +57,31 @@ gitnotary version
 
 GitPings currently targets macOS Tahoe 26 or newer.
 
-### Authorize GitHub
+### Connect GitHub
 
-GitPings uses the public [GitNotary GitHub App](https://github.com/apps/gitnotary).
-No callback server, client secret, private key, Vercel project, or Convex database
-is involved.
+The recommended local setup is:
 
-1. Install GitNotary for your account or organization and choose only the
-   repositories you want GitPings to see.
-2. Run `gitnotary setup` (or choose **Sign in with GitHub** in Settings).
-3. Approve the one-time code on GitHub's device-login page.
-4. Open the dashboard, choose **Add Repository**, and select repositories to
+1. Run `gh auth login` if GitHub CLI is not already authenticated.
+2. Run `gitnotary setup`, or choose **Local GitHub CLI** in Settings → Account.
+3. Open the dashboard, choose **Add Repository**, and select repositories to
    monitor.
-5. Configure filters and notifications, then pin up to five pull requests.
+4. Configure filters and notifications, then pin up to five pull requests.
 
-GitHub may require an organization owner to approve the installation.
+Alternatively, choose **GitNotary GitHub App** in Settings → Account. That mode
+uses the public [GitNotary GitHub App](https://github.com/apps/gitnotary), its
+fine-grained read-only permissions, and GitHub device flow. Install it only for
+the repositories GitPings should see. Organization approval may be required.
+
+Neither mode uses a GitPings-operated server.
+
+### Why the app is not sandboxed
+
+Apple's App Sandbox does not allow an app to run programs outside its bundle or
+container. Local GitHub CLI mode must run the user's Homebrew-installed `gh`
+executable, so the independently distributed app does not enable App Sandbox.
+It remains Developer ID signed, notarized, protected by Hardened Runtime, and
+limited by implementation to read-only GitHub queries. Users who do not accept
+the broader local CLI credential can use the GitHub App method instead.
 
 ## Maintainer release setup
 
