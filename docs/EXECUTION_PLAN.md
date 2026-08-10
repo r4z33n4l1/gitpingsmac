@@ -49,7 +49,7 @@ These defaults prevent agents from making inconsistent local choices. They can b
 | Runtime boundary | Mac app directly to GitHub; local Keychain/SwiftData only |
 | Polling target | 60 seconds while running, subject to backoff |
 | Pin limit | Five, with explicit replacement |
-| Closed/merged pin behavior | Remains pinned with terminal state until user unpins |
+| Closed/merged pin behavior | Notify once, then automatically remove from pins |
 | Test notification defaults | All tracked event types enabled |
 | Teammate-release defaults | Notch enabled; Notification Center and sound opt-in |
 | Transition retention | Latest 100 events or seven days, whichever removes data first |

@@ -168,4 +168,19 @@ public enum PinPolicy {
     public static func canPin(currentCount: Int) -> Bool {
         currentCount < maximumPinCount
     }
+
+    /// Terminal PRs leave the ambient quick view after their transition has
+    /// been observed. Unknown lifecycle values stay pinned rather than being
+    /// treated as closed or merged.
+    public static func removingTerminalPullRequests(
+        from pinnedIDs: [GitHubNodeID],
+        pullRequests: [PullRequestSummary]
+    ) -> [GitHubNodeID] {
+        let terminalIDs = Set(
+            pullRequests.lazy
+                .filter { $0.lifecycleState == .closed || $0.lifecycleState == .merged }
+                .map(\.id)
+        )
+        return pinnedIDs.filter { !terminalIDs.contains($0) }
+    }
 }

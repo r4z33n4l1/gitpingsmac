@@ -20,6 +20,34 @@ final class DomainContractTests: XCTestCase {
         XCTAssertFalse(PinPolicy.canPin(currentCount: 5))
     }
 
+    func testPinPolicyAutomaticallyRemovesOnlyClosedAndMergedPullRequests() {
+        let open = GitPingsFixtures.pullRequest(id: "PR_OPEN", lifecycle: .open)
+        let closed = GitPingsFixtures.pullRequest(id: "PR_CLOSED", lifecycle: .closed)
+        let merged = GitPingsFixtures.pullRequest(id: "PR_MERGED", lifecycle: .merged)
+        let unknown = GitPingsFixtures.pullRequest(id: "PR_UNKNOWN", lifecycle: .unknown)
+
+        let result = PinPolicy.removingTerminalPullRequests(
+            from: [open.id, closed.id, merged.id, unknown.id],
+            pullRequests: [open, closed, merged, unknown]
+        )
+
+        XCTAssertEqual(result, [open.id, unknown.id])
+    }
+
+    func testMenuBarStatusShowsCIAndMergeStateTogether() {
+        let conflicting = GitPingsFixtures.pullRequest(ci: .passing, merge: .conflicting)
+        XCTAssertEqual(
+            MenuBarPRStatusFormatter.text(for: conflicting),
+            "CI passing · Merge conflicts"
+        )
+
+        let blocked = GitPingsFixtures.pullRequest(ci: .pending, merge: .blocked)
+        XCTAssertEqual(
+            MenuBarPRStatusFormatter.text(for: blocked),
+            "CI pending · Merge blocked"
+        )
+    }
+
     func testMenuBarSeverityAttentionForFailingOrConflict() {
         let failing = GitPingsFixtures.pullRequest(ci: .failing, merge: .mergeable)
         XCTAssertEqual(MenuBarSeverityCalculator.severity(for: [failing]), .attention)
