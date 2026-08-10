@@ -333,12 +333,18 @@ final class AppModel {
         if !silent { statusMessage = "Refreshing from GitHub…" }
         defer { isRefreshing = false }
         do {
-            let previous = Dictionary(uniqueKeysWithValues: pullRequests.map { ($0.id, $0) })
+            var previous = Dictionary(uniqueKeysWithValues: pullRequests.map { ($0.id, $0) })
+            for pinnedID in pinnedIDs {
+                if let retained = retainedPinnedPullRequests[pinnedID] {
+                    previous[pinnedID] = retained
+                }
+            }
             var result = try await github.fetchPullRequests(
                 repositories: selected,
                 filters: filters,
                 login: account.login
             ).pullRequests
+            let filterMatchedIDs = Set(result.map(\.id))
 
             var authoredPullRequests = result.filter {
                 $0.authorLogin.caseInsensitiveCompare(account.login) == .orderedSame
@@ -364,10 +370,15 @@ final class AppModel {
             let idsToVerify = Set(previous.keys).union(pinnedIDs)
             var inaccessiblePinnedIDs: Set<GitHubNodeID> = []
             for missingID in idsToVerify where !result.contains(where: { $0.id == missingID }) {
-                if let verified = try await github.lookupPullRequest(id: missingID),
-                   verified.lifecycleState == .closed || verified.lifecycleState == .merged
-                {
-                    result.append(verified)
+                if let verified = try await github.lookupPullRequest(id: missingID) {
+                    if PinPolicy.shouldMonitorVerifiedLookup(
+                        verified,
+                        isPinned: pinnedIDs.contains(missingID)
+                    ) {
+                        // Pins remain actively monitored even when a filter
+                        // change removes them from the dashboard query.
+                        result.append(verified)
+                    }
                 } else if pinnedIDs.contains(missingID) {
                     inaccessiblePinnedIDs.insert(missingID)
                 }
@@ -405,16 +416,20 @@ final class AppModel {
                 from: pinnedIDs,
                 pullRequests: result
             )
-            pullRequests = result.filter { $0.lifecycleState == .open }
+            pullRequests = result.filter {
+                $0.lifecycleState == .open && filterMatchedIDs.contains($0.id)
+            }
             retainedPinnedPullRequests = [:]
-            for pullRequest in result where pullRequest.lifecycleState != .open
-                && (pinnedIDs.contains(pullRequest.id)
-                    || pullRequest.lifecycleState == .closed
-                    || pullRequest.lifecycleState == .merged)
-            {
-                // Keep one refresh cycle of terminal metadata so clicking its
-                // transition notification can still open GitHub after auto-unpin.
-                retainedPinnedPullRequests[pullRequest.id] = pullRequest
+            for pullRequest in result {
+                if pullRequest.lifecycleState == .closed || pullRequest.lifecycleState == .merged {
+                    // Keep one refresh cycle of terminal metadata so clicking
+                    // its transition notification can still open GitHub.
+                    retainedPinnedPullRequests[pullRequest.id] = pullRequest
+                } else if pinnedIDs.contains(pullRequest.id)
+                    && !filterMatchedIDs.contains(pullRequest.id)
+                {
+                    retainedPinnedPullRequests[pullRequest.id] = pullRequest
+                }
             }
             for pullRequest in pullRequests {
                 retainedPinnedPullRequests[pullRequest.id] = nil

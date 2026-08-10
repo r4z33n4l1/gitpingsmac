@@ -183,4 +183,13 @@ public enum PinPolicy {
         )
         return pinnedIDs.filter { !terminalIDs.contains($0) }
     }
+
+    public static func shouldMonitorVerifiedLookup(
+        _ pullRequest: PullRequestSummary,
+        isPinned: Bool
+    ) -> Bool {
+        isPinned
+            || pullRequest.lifecycleState == .closed
+            || pullRequest.lifecycleState == .merged
+    }
 }

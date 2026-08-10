@@ -156,6 +156,7 @@ CI and merge state must remain separate. “CI passing” does not imply “merg
 - PIN-3: At most five PRs may be pinned.
 - PIN-4: When the limit is reached, pinning another PR opens a small replacement chooser; the app must not silently evict a pin.
 - PIN-5: A pinned PR that is verified closed or merged emits its terminal transition and is then automatically removed from the pin view. A still-open PR that no longer matches the active filters remains pinned with its last known state until the user removes it or access is lost.
+- PIN-5A: A still-open pinned PR remains actively polled for CI and mergeability transitions even when it no longer matches the dashboard's current PR filters.
 - PIN-6: Pins are ordered manually, with newly pinned items added last.
 
 ### MENUBAR — Quick status
@@ -172,6 +173,7 @@ CI and merge state must remain separate. “CI passing” does not imply “merg
   - All passing and mergeable: healthy state
   - No pins: neutral state
 - MENUBAR-8: State is not communicated by color alone.
+- MENUBAR-9: The popover provides Pinned and Recent tabs. Recent contains at most the five most recently updated open PRs across selected repositories.
 
 ### REFRESH — Polling
 
