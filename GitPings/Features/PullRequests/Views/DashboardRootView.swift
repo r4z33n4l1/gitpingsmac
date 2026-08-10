@@ -120,7 +120,14 @@ struct DashboardRootView: View {
             }
             .navigationTitle("Pull Requests")
             .toolbar {
-                ToolbarItem {
+                ToolbarItemGroup {
+                    Button {
+                        model.sendTestNotchNotification()
+                    } label: {
+                        Label("Test Notch", systemImage: "bell.and.waves.left.and.right")
+                    }
+                    .help("Preview a notch notification")
+
                     Button {
                         model.refresh()
                     } label: {

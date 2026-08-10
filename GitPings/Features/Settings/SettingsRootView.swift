@@ -104,9 +104,8 @@ struct SettingsRootView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Section("Test") {
-                Button("Send Test Notification") { model.sendTestNotification() }
-                    .disabled(!model.notificationsEnabled)
-                Text("Tests never enter PR history or change the menu-bar status.")
+                Button("Test Notch Notification") { model.sendTestNotchNotification() }
+                Text("Previews the notch directly without changing notification preferences, PR history, or menu-bar status.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -144,6 +143,10 @@ struct SettingsRootView: View {
             Text("On Macs without a camera housing, the same notification appears as a compact centered pill below the menu bar.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            Section("About GitPings") {
+                LabeledContent("Version", value: AppVersionInfo.current.version)
+                LabeledContent("Build", value: AppVersionInfo.current.build)
+            }
         }
         .formStyle(.grouped)
         .tabItem { Label("Appearance", systemImage: "paintbrush") }

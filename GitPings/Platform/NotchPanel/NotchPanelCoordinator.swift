@@ -81,7 +81,6 @@ public final class NotchPanelCoordinator: NotchPresenting {
     private var isScreenLocked: Bool = false
     private var isTargetFullScreen: Bool = false
     private var currentEvents: [TransitionEvent] = []
-    private var currentLayout: NotchPanelLayout?
     private var dismissalTask: Task<Void, Never>?
     private var presentationGeneration = 0
     private var countdownStartedAt: TimeInterval = 0
@@ -89,7 +88,7 @@ public final class NotchPanelCoordinator: NotchPresenting {
 
     #if canImport(AppKit)
     private var panel: NSPanel?
-    private var hosting: NSHostingView<NotchEventContentView>?
+    private var hosting: EdgeToEdgeNotchHostingView?
     // Notification tokens are only installed/removed as part of this coordinator's
     // lifecycle. Marking the references unsafe-nonisolated lets Swift 6's
     // nonisolated deinitializer release them without sending the AppKit objects.
@@ -161,7 +160,6 @@ public final class NotchPanelCoordinator: NotchPresenting {
         ) else {
             return
         }
-        currentLayout = layout
         presentationGeneration += 1
         dismissalTask?.cancel()
         remainingHoldDuration = options.holdDuration
@@ -177,6 +175,9 @@ public final class NotchPanelCoordinator: NotchPresenting {
             events: currentEvents,
             overflowCount: overflow,
             mode: layout.mode,
+            notchStemWidth: layout.reservedTopCenter?.width ?? 0,
+            notchStemHeight: layout.reservedTopCenter?.height ?? 0,
+            presentationID: presentationGeneration,
             reduceMotion: options.reduceMotion,
             onHover: { [weak self] hovering in
                 onHover?(hovering)
@@ -192,15 +193,17 @@ public final class NotchPanelCoordinator: NotchPresenting {
         hosting.rootView = content
         let wasVisible = panel.isVisible
         panel.hasShadow = layout.mode == .fallbackPill
+        // Keep the AppKit shell fixed at its maximum bounds. SwiftUI animates
+        // the black surface inside this transparent panel so the top edge never
+        // drifts away from the physical camera housing.
+        panel.setFrame(layout.expandedFrame, display: true)
         if !wasVisible {
             panel.alphaValue = options.reduceMotion ? 0 : 1
-            panel.setFrame(options.reduceMotion ? layout.expandedFrame : layout.collapsedFrame, display: true)
             // Nonactivating show — do not steal keyboard focus (NOTCH-4).
             panel.orderFrontRegardless()
-            animatePresentation(of: panel, to: layout.expandedFrame)
+            animatePresentation(of: panel)
         } else {
             panel.alphaValue = 1
-            panel.setFrame(layout.expandedFrame, display: true)
         }
         panel.resignKey()
         scheduleDismiss(after: remainingHoldDuration)
@@ -232,9 +235,6 @@ public final class NotchPanelCoordinator: NotchPresenting {
                 context.duration = duration
                 context.allowsImplicitAnimation = true
                 panel.animator().alphaValue = 0
-                if !options.reduceMotion, let currentLayout {
-                    panel.animator().setFrame(currentLayout.collapsedFrame, display: true)
-                }
             }
             guard generation == presentationGeneration else { return }
             panel.orderOut(nil)
@@ -242,7 +242,6 @@ public final class NotchPanelCoordinator: NotchPresenting {
         }
         #endif
         currentEvents = []
-        currentLayout = nil
         callbacks.onDismissalCompleted?()
     }
 
@@ -320,8 +319,15 @@ public final class NotchPanelCoordinator: NotchPresenting {
         )
         panel.isFloatingPanel = true
         panel.hidesOnDeactivate = false
-        panel.level = .statusBar
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        panel.level = NSWindow.Level(
+            rawValue: Int(CGWindowLevelForKey(.statusWindow)) + 1
+        )
+        panel.collectionBehavior = [
+            .canJoinAllSpaces,
+            .fullScreenAuxiliary,
+            .stationary,
+            .ignoresCycle,
+        ]
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = true
@@ -329,7 +335,7 @@ public final class NotchPanelCoordinator: NotchPresenting {
         panel.titlebarAppearsTransparent = true
         panel.animationBehavior = .none
 
-        let hosting = NSHostingView(
+        let hosting = EdgeToEdgeNotchHostingView(
             rootView: NotchEventContentView(
                 events: [],
                 overflowCount: 0,
@@ -345,16 +351,17 @@ public final class NotchPanelCoordinator: NotchPresenting {
         self.hosting = hosting
     }
 
-    private func animatePresentation(of panel: NSPanel, to frame: CGRect) {
-        let duration = options.reduceMotion ? 0.14 : 0.42
+    private func animatePresentation(of panel: NSPanel) {
+        guard options.reduceMotion else {
+            panel.alphaValue = 1
+            return
+        }
+        let duration = 0.14
         NSAnimationContext.runAnimationGroup { context in
             context.duration = duration
             context.allowsImplicitAnimation = true
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             panel.animator().alphaValue = 1
-            if !options.reduceMotion {
-                panel.animator().setFrame(frame, display: true)
-            }
         }
     }
 
@@ -364,3 +371,14 @@ public final class NotchPanelCoordinator: NotchPresenting {
     }
     #endif
 }
+
+#if canImport(AppKit)
+/// The panel is already positioned against the physical top obstruction.
+/// Returning zero here prevents NSHostingView from applying NSScreen's notch
+/// safe area a second time and creating a visible gap below the menu bar.
+private final class EdgeToEdgeNotchHostingView: NSHostingView<NotchEventContentView> {
+    override var safeAreaInsets: NSEdgeInsets {
+        NSEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+    }
+}
+#endif

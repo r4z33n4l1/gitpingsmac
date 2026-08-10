@@ -72,7 +72,6 @@ public enum ScreenGeometry {
     public static let defaultCollapsedSize = CGSize(width: 200, height: 28)
     public static let defaultExpandedSize = CGSize(width: 368, height: 78)
     public static let fallbackTopPadding: CGFloat = 8
-    public static let notchCollapsedHeight: CGFloat = 2
 
     public static func hasTopObstruction(_ metrics: ScreenTopMetrics) -> Bool {
         if metrics.safeAreaInsetsTop > 0 {
@@ -132,26 +131,24 @@ public enum ScreenGeometry {
         case .notchAttached:
             let reserved = reservedTopCenterBand(in: metrics)
             let centerX = reserved?.midX ?? metrics.frame.midX
-            // Expand downward from the bottom of the reserved housing band (NOTCH-10).
-            let anchorY = reserved?.minY ?? (metrics.frame.maxY - metrics.safeAreaInsetsTop)
-            // Keep the resting panel almost entirely behind the camera housing.
-            // The visible two-point seam then grows downward with the content,
-            // producing the supported illusion that the notch itself expands.
-            let restingWidth = min(
-                expandedSize.width,
-                max(collapsedSize.width, reserved?.width ?? collapsedSize.width)
-            )
+            let notchHeight = max(reserved?.height ?? 0, metrics.safeAreaInsetsTop)
+            let notchWidth = reserved?.width ?? min(collapsedSize.width, expandedSize.width)
+            let top = reserved?.maxY ?? metrics.frame.maxY
+            // Rest entirely within the physical obstruction. Expansion keeps
+            // the same top edge, includes the obstruction band, and grows down.
             let collapsed = CGRect(
-                x: centerX - restingWidth / 2,
-                y: anchorY - notchCollapsedHeight,
-                width: restingWidth,
-                height: notchCollapsedHeight
+                x: centerX - notchWidth / 2,
+                y: top - notchHeight,
+                width: notchWidth,
+                height: notchHeight
             )
+            let expandedWidth = max(expandedSize.width, notchWidth)
+            let expandedHeight = expandedSize.height + notchHeight
             let expanded = CGRect(
-                x: centerX - expandedSize.width / 2,
-                y: anchorY - expandedSize.height,
-                width: expandedSize.width,
-                height: expandedSize.height
+                x: centerX - expandedWidth / 2,
+                y: top - expandedHeight,
+                width: expandedWidth,
+                height: expandedHeight
             )
             return NotchPanelLayout(
                 mode: .notchAttached,

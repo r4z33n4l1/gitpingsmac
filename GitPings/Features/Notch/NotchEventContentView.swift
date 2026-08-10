@@ -5,6 +5,9 @@ public struct NotchEventContentView: View {
     public var events: [TransitionEvent]
     public var overflowCount: Int
     public var mode: NotchPresentationMode
+    public var notchStemWidth: CGFloat
+    public var notchStemHeight: CGFloat
+    public var presentationID: Int
     public var reduceMotion: Bool
     public var onHover: (Bool) -> Void
     public var onClick: (TransitionEvent) -> Void
@@ -13,6 +16,9 @@ public struct NotchEventContentView: View {
         events: [TransitionEvent],
         overflowCount: Int = 0,
         mode: NotchPresentationMode,
+        notchStemWidth: CGFloat = 0,
+        notchStemHeight: CGFloat = 0,
+        presentationID: Int = 0,
         reduceMotion: Bool = false,
         onHover: @escaping (Bool) -> Void = { _ in },
         onClick: @escaping (TransitionEvent) -> Void = { _ in }
@@ -20,12 +26,37 @@ public struct NotchEventContentView: View {
         self.events = events
         self.overflowCount = overflowCount
         self.mode = mode
+        self.notchStemWidth = notchStemWidth
+        self.notchStemHeight = notchStemHeight
+        self.presentationID = presentationID
         self.reduceMotion = reduceMotion
         self.onHover = onHover
         self.onClick = onClick
     }
 
+    @State private var isExpanded = false
+
     public var body: some View {
+        GeometryReader { proxy in
+            notificationSurface(in: proxy.size)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+        .ignoresSafeArea()
+        .task(id: presentationID) {
+            isExpanded = false
+            guard !reduceMotion else {
+                isExpanded = true
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(45))
+            guard !Task.isCancelled else { return }
+            withAnimation(.spring(response: 0.44, dampingFraction: 0.82)) {
+                isExpanded = true
+            }
+        }
+    }
+
+    private func notificationSurface(in availableSize: CGSize) -> some View {
         Group {
             if let primary = events.first {
                 primaryRow(primary)
@@ -34,12 +65,32 @@ public struct NotchEventContentView: View {
             }
         }
         .padding(.horizontal, 14)
+        .padding(.top, mode == .notchAttached ? notchStemHeight : 0)
         .padding(.vertical, 10)
+        .opacity(isExpanded ? 1 : 0)
+        .frame(
+            width: isExpanded ? availableSize.width : collapsedSurfaceSize.width,
+            height: isExpanded ? availableSize.height : collapsedSurfaceSize.height,
+            alignment: .bottom
+        )
         .background(capsuleBackground)
+        .clipShape(surfaceClipShape)
         .onHover(perform: onHover)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilitySummary)
         .accessibilityAddTraits(.isButton)
+    }
+
+    private var collapsedSurfaceSize: CGSize {
+        switch mode {
+        case .notchAttached:
+            CGSize(
+                width: max(notchStemWidth, 1),
+                height: max(notchStemHeight, 1)
+            )
+        case .fallbackPill:
+            ScreenGeometry.defaultCollapsedSize
+        }
     }
 
     private func primaryRow(_ event: TransitionEvent) -> some View {
@@ -110,24 +161,74 @@ public struct NotchEventContentView: View {
     @ViewBuilder
     private var capsuleBackground: some View {
         if mode == .notchAttached {
-            let shape = UnevenRoundedRectangle(
-                cornerRadii: .init(
-                    topLeading: 0,
-                    bottomLeading: 24,
-                    bottomTrailing: 24,
-                    topTrailing: 0
-                ),
-                style: .continuous
+            let shape = NotchAttachedShape(
+                stemWidth: notchStemWidth,
+                stemHeight: notchStemHeight
             )
             shape
                 .fill(.black)
-                .overlay(shape.strokeBorder(.white.opacity(0.14), lineWidth: 0.5))
+                .overlay(shape.stroke(Color.white.opacity(0.14), lineWidth: 0.5))
         } else {
             let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
             shape
                 .fill(.ultraThinMaterial)
                 .overlay(shape.strokeBorder(.white.opacity(0.16), lineWidth: 0.5))
         }
+    }
+
+    private var surfaceClipShape: AnyShape {
+        if mode == .notchAttached {
+            AnyShape(NotchAttachedShape(
+                stemWidth: notchStemWidth,
+                stemHeight: notchStemHeight
+            ))
+        } else {
+            AnyShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+    }
+}
+
+/// A transparent menu-bar band surrounds a notch-width stem; only below the
+/// camera housing does the surface flare into the notification card.
+private struct NotchAttachedShape: Shape {
+    var stemWidth: CGFloat
+    var stemHeight: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let radius = min(24, rect.width / 2, rect.height / 2)
+        let halfStem = min(max(stemWidth / 2, 1), rect.width / 2)
+        let stemLeft = rect.midX - halfStem
+        let stemRight = rect.midX + halfStem
+        let shoulderY = min(max(stemHeight, 0), rect.maxY - radius)
+        let flareY = min(shoulderY + 12, rect.maxY - radius)
+
+        var path = Path()
+        path.move(to: CGPoint(x: stemLeft, y: rect.minY))
+        path.addLine(to: CGPoint(x: stemRight, y: rect.minY))
+        path.addLine(to: CGPoint(x: stemRight, y: shoulderY))
+        path.addCurve(
+            to: CGPoint(x: rect.maxX, y: flareY),
+            control1: CGPoint(x: stemRight, y: flareY),
+            control2: CGPoint(x: rect.maxX, y: shoulderY)
+        )
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - radius))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX - radius, y: rect.maxY),
+            control: CGPoint(x: rect.maxX, y: rect.maxY)
+        )
+        path.addLine(to: CGPoint(x: rect.minX + radius, y: rect.maxY))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX, y: rect.maxY - radius),
+            control: CGPoint(x: rect.minX, y: rect.maxY)
+        )
+        path.addLine(to: CGPoint(x: rect.minX, y: flareY))
+        path.addCurve(
+            to: CGPoint(x: stemLeft, y: shoulderY),
+            control1: CGPoint(x: rect.minX, y: shoulderY),
+            control2: CGPoint(x: stemLeft, y: flareY)
+        )
+        path.closeSubpath()
+        return path
     }
 }
 

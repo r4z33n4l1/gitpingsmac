@@ -250,7 +250,7 @@ final class AppModel {
         refresh()
     }
 
-    func sendTestNotification() {
+    func sendTestNotchNotification() {
         let sample = pinnedPullRequests.first ?? pullRequests.first ?? GitPingsFixtures.pullRequest()
         let event = TransitionEvent(
             pullRequestID: sample.id,
@@ -262,7 +262,7 @@ final class AppModel {
             newValue: CIState.passing.rawValue,
             observedAt: Date()
         )
-        Task { await deliver(events: [event]) }
+        Task { await notchPresenter.present(events: [event]) }
     }
 
     func openPullRequest(id: GitHubNodeID) {
@@ -401,9 +401,19 @@ final class AppModel {
                 authoredPullRequestBaselinePending = false
             }
             let events = authoredEvents + stateEvents
+            pinnedIDs = PinPolicy.removingTerminalPullRequests(
+                from: pinnedIDs,
+                pullRequests: result
+            )
             pullRequests = result.filter { $0.lifecycleState == .open }
-            retainedPinnedPullRequests = retainedPinnedPullRequests.filter { pinnedIDs.contains($0.key) }
-            for pullRequest in result where pullRequest.lifecycleState != .open && pinnedIDs.contains(pullRequest.id) {
+            retainedPinnedPullRequests = [:]
+            for pullRequest in result where pullRequest.lifecycleState != .open
+                && (pinnedIDs.contains(pullRequest.id)
+                    || pullRequest.lifecycleState == .closed
+                    || pullRequest.lifecycleState == .merged)
+            {
+                // Keep one refresh cycle of terminal metadata so clicking its
+                // transition notification can still open GitHub after auto-unpin.
                 retainedPinnedPullRequests[pullRequest.id] = pullRequest
             }
             for pullRequest in pullRequests {

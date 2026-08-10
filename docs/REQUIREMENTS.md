@@ -155,7 +155,7 @@ CI and merge state must remain separate. “CI passing” does not imply “merg
 - PIN-2: Pins persist across launches using the GitHub global node ID as identity.
 - PIN-3: At most five PRs may be pinned.
 - PIN-4: When the limit is reached, pinning another PR opens a small replacement chooser; the app must not silently evict a pin.
-- PIN-5: A pinned PR that closes or no longer matches filters remains visible long enough to communicate its final known state and can then be removed by the user.
+- PIN-5: A pinned PR that is verified closed or merged emits its terminal transition and is then automatically removed from the pin view. A still-open PR that no longer matches the active filters remains pinned with its last known state until the user removes it or access is lost.
 - PIN-6: Pins are ordered manually, with newly pinned items added last.
 
 ### MENUBAR — Quick status
@@ -211,12 +211,12 @@ CI and merge state must remain separate. “CI passing” does not imply “merg
 - NOTIFY-6: The app requests macOS notification permission in context, when the user enables the system channel, not automatically at launch.
 - NOTIFY-7: A notification click opens the PR on GitHub.
 - NOTIFY-8: Notification text contains no source code, comments, or other repository content beyond repository name, PR number/title, and state transition.
-- NOTIFY-9: The app provides a “Send test notification” action for each delivery channel.
+- NOTIFY-9: The app provides a direct notch-preview action in both the dashboard toolbar and Settings. Testing does not alter preferences, transition history, or menu-bar status.
 
 ### NOTCH — Notch presentation
 
 - NOTCH-1: The app uses only public macOS APIs.
-- NOTCH-2: On a display with a nonzero top safe-area inset, the panel anchors at the top center around the obscured/notch region.
+- NOTCH-2: On a display with a nonzero top safe-area inset, the panel's fixed expanded bounds remain anchored to the absolute screen top while its inner SwiftUI surface springs down and outward from the obscured/notch region.
 - NOTCH-3: On a display without a notch, the panel uses a compact top-center floating-pill fallback.
 - NOTCH-4: The panel does not activate the app or steal keyboard focus when appearing.
 - NOTCH-5: The compact event view shows repository/PR identity, a state icon, a short transition such as “CI passed,” and age if queued.
@@ -236,6 +236,7 @@ CI and merge state must remain separate. “CI passing” does not imply “merg
 - SETTINGS-4: Refresh shows interval, last attempt, last success, next eligible attempt, and rate-limit/backoff state. The MVP interval is fixed at one minute but represented as a future-configurable setting.
 - SETTINGS-5: Appearance includes notch notifications, fallback pill, full-screen suppression, and Reduce Motion status.
 - SETTINGS-6: Account exposes current GitHub login, accessible installation/repository count, Reauthorize, and Sign Out.
+- SETTINGS-7: Settings visibly reports the running app's marketing version and build number from its bundle metadata.
 
 ### LIFECYCLE — App behavior
 
@@ -396,7 +397,6 @@ The MVP is acceptable when all of the following are demonstrated on macOS 26:
 
 - Final product name, icon, and bundle identifier.
 - Whether native macOS Notification Center and sound should default on or off for non-test releases.
-- Whether a closed/merged pinned PR should auto-unpin after a grace period.
 - Whether the notch fallback should follow the display containing the pointer, the active window, or only the built-in display.
 - Retention duration for local transition history.
 

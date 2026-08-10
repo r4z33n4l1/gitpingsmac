@@ -40,7 +40,7 @@ struct MenuBarPopoverView: View {
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
                                     .truncationMode(.middle)
-                                Text(statusText(for: pr))
+                                Text(MenuBarPRStatusFormatter.text(for: pr))
                                     .font(.caption2.weight(.medium))
                                     .foregroundStyle(rowColor(for: pr))
                                     .lineLimit(1)
@@ -116,16 +116,33 @@ struct MenuBarPopoverView: View {
         return .secondary
     }
 
-    private func statusText(for pr: PullRequestSummary) -> String {
+}
+
+enum MenuBarPRStatusFormatter {
+    static func text(for pr: PullRequestSummary) -> String {
         if pr.lifecycleState == .merged { return "Merged" }
         if pr.lifecycleState == .closed { return "Closed" }
-        if pr.ciState == .failing { return "CI failing · needs attention" }
-        if pr.mergeState == .conflicting { return "Merge conflicts · needs attention" }
-        if pr.ciState == .passing && pr.mergeState == .mergeable { return "CI passing · ready to merge" }
-        if pr.ciState == .pending || pr.mergeState == .checking { return "Checks in progress" }
-        if pr.mergeState == .blocked { return "Merge blocked" }
-        if pr.ciState == .noChecks { return "No CI checks · \(pr.mergeState.rawValue)" }
-        return "CI \(pr.ciState.rawValue) · merge \(pr.mergeState.rawValue)"
+        return "\(ciText(pr.ciState)) · \(mergeText(pr.mergeState))"
+    }
+
+    private static func ciText(_ state: CIState) -> String {
+        switch state {
+        case .passing: "CI passing"
+        case .pending: "CI pending"
+        case .failing: "CI failing"
+        case .noChecks: "No CI checks"
+        case .unknown: "CI unknown"
+        }
+    }
+
+    private static func mergeText(_ state: MergeState) -> String {
+        switch state {
+        case .mergeable: "Mergeable"
+        case .blocked: "Merge blocked"
+        case .conflicting: "Merge conflicts"
+        case .checking: "Checking mergeability"
+        case .unknown: "Merge status unknown"
+        }
     }
 }
 

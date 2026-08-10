@@ -8,9 +8,10 @@ Target: **macOS Tahoe 26 and newer**
 
 ## Status
 
-The native MVP builds and runs on macOS Tahoe. Version 0.1.0 is Developer ID
-signed and notarized; version 0.1.1 adds the shared GitNotary GitHub App and CLI
-onboarding flow.
+The native MVP builds and runs on macOS Tahoe. Version 0.1.1 is Developer ID
+signed and notarized. Version 0.1.2 is the current release candidate, adding
+notch-attached spring animation, dashboard testing controls, consistent CI and
+merge status copy, terminal-PR auto-unpinning, and visible version/build details.
 
 ## Install and connect
 
