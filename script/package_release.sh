@@ -3,7 +3,7 @@
 #
 # Local mode creates an explicitly unnotarized QA ZIP.
 # Notarized mode requires a Developer ID Application identity and a notarytool
-# Keychain profile, then produces the artifact intended for teammates/Homebrew.
+# Keychain profile, then produces ZIP, DMG, and Homebrew artifacts.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -30,7 +30,7 @@ Modes:
   --local       Build/test a universal, ad-hoc-signed QA ZIP. This artifact is
                 not suitable for normal teammate distribution through Gatekeeper.
   --notarize    Sign with Developer ID, notarize, staple, validate with Gatekeeper,
-                and create the release ZIP, SHA-256 checksum, and Homebrew Cask.
+                and create release ZIP/DMG artifacts, checksums, and a Homebrew Cask.
 
 Options:
   --identity NAME
@@ -235,6 +235,35 @@ ditto -c -k --sequesterRsrc --keepParent "$STAGED_APP" "$ARTIFACT_PATH"
 )
 
 if [[ "$MODE" == "notarize" ]]; then
+  DMG_SOURCE="${STAGING_ROOT}/dmg-source"
+  DMG_NAME="GitPings-${VERSION}.dmg"
+  DMG_PATH="${DIST_DIR}/${DMG_NAME}"
+  mkdir -p "$DMG_SOURCE"
+  ditto "$STAGED_APP" "${DMG_SOURCE}/GitPings.app"
+  ln -s /Applications "${DMG_SOURCE}/Applications"
+
+  echo "==> Creating, signing, and notarizing drag-and-drop DMG"
+  hdiutil create \
+    -volname GitPings \
+    -srcfolder "$DMG_SOURCE" \
+    -ov \
+    -format UDZO \
+    "$DMG_PATH"
+  codesign --force --timestamp --sign "$SIGNING_IDENTITY" "$DMG_PATH"
+  codesign --verify --verbose=2 "$DMG_PATH"
+  xcrun notarytool submit \
+    "$DMG_PATH" \
+    --keychain-profile "$NOTARY_PROFILE" \
+    --wait \
+    --output-format json | tee "${DIST_DIR}/GitPings-${VERSION}-dmg-notarization.json"
+  xcrun stapler staple "$DMG_PATH"
+  xcrun stapler validate "$DMG_PATH"
+  spctl -a -t open --context context:primary-signature -vvv "$DMG_PATH"
+  (
+    cd "$DIST_DIR"
+    shasum -a 256 "$DMG_NAME" >"${DMG_NAME}.sha256"
+  )
+
   SHA256="$(shasum -a 256 "$ARTIFACT_PATH" | awk '{ print $1 }')"
   sed \
     -e "s/__VERSION__/${VERSION}/g" \
@@ -248,4 +277,7 @@ echo "checksum: ${ARTIFACT_PATH}.sha256"
 echo "architectures: ${EXECUTABLE_ARCHS}"
 if [[ "$MODE" == "local" ]]; then
   echo "WARNING: local artifact is not Developer ID signed or notarized; do not publish it as a teammate release."
+else
+  echo "dmg: ${DMG_PATH}"
+  echo "dmg checksum: ${DMG_PATH}.sha256"
 fi

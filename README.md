@@ -8,11 +8,10 @@ Target: **macOS Tahoe 26 and newer**
 
 ## Status
 
-The native MVP builds and runs on macOS Tahoe. Version 0.1.1 is Developer ID
-signed and notarized. Version 0.2.0 is the current release candidate, adding
-selectable local GitHub CLI/GitHub App authentication, queued notch alerts,
-Pinned/Recent menu tabs, dashboard testing controls, and visible version/build
-details.
+Version 0.2.0 is the current public release. It is Developer ID signed,
+Apple-notarized, and adds selectable local GitHub CLI/GitHub App authentication,
+queued notch alerts, Pinned/Recent menu tabs, dashboard testing controls, and
+visible version/build details.
 
 ## Install and connect
 
@@ -33,7 +32,7 @@ never prints, copies, imports, or stores the CLI token. Select repositories in
 the app after it opens. Users who prefer fine-grained, selected-repository
 permissions can choose **GitNotary GitHub App** in Settings → Account.
 
-Until the Homebrew tap is published, download the signed release directly from
+For drag-and-drop installation, download the signed and notarized DMG from
 [GitHub Releases](https://github.com/r4z33n4l1/gitpingsmac/releases).
 
 ## Canonical run entrypoint
