@@ -13,7 +13,7 @@ The teammate release is:
 - signed with **Developer ID Application**;
 - protected by Hardened Runtime;
 - notarized by Apple with a stapled ticket;
-- packaged as `GitPings-<version>.zip` with a SHA-256 checksum; and
+- packaged as checksum-protected ZIP and drag-and-drop DMG artifacts; and
 - installable directly or through the generated Homebrew Cask.
 
 Do not publish `*-local-unnotarized.zip`. That artifact exists only to validate
@@ -22,8 +22,6 @@ the packaging pipeline before Developer ID credentials are available.
 ## Recipient setup
 
 ### Homebrew installation
-
-Once the tap is published:
 
 ```bash
 brew install --cask r4z33n4l1/gitnorary/gitpings
@@ -44,10 +42,11 @@ gitnotary version
 
 ### Manual installation
 
-1. Download `GitPings-<version>.zip` and its `.sha256` file from the matching
-   GitHub Release.
-2. Verify the checksum with `shasum -a 256 -c GitPings-<version>.zip.sha256`.
-3. Unzip it and move `GitPings.app` to Applications.
+1. Download `GitPings-<version>.dmg` from the matching GitHub Release.
+2. Optionally verify its checksum with
+   `shasum -a 256 -c GitPings-<version>.dmg.sha256`.
+3. Open the DMG and drag GitPings to Applications. The ZIP remains available
+   for automated installation and checksum verification.
 4. Open GitPings. Its status icon appears in the menu bar.
 5. Run the bundled helper directly once, or add it to your PATH:
 
@@ -114,14 +113,18 @@ minimum release entitlements, verifies Hardened Runtime, rejects
 ```text
 dist/GitPings-<version>.zip
 dist/GitPings-<version>.zip.sha256
+dist/GitPings-<version>.dmg
+dist/GitPings-<version>.dmg.sha256
 dist/GitPings-<version>-signing.txt
 dist/GitPings-<version>-entitlements.plist
 dist/GitPings-<version>-notarization.json
+dist/GitPings-<version>-dmg-notarization.json
 dist/gitpings.rb
 ```
 
-Create an immutable GitHub Release tagged `v<version>` and attach the ZIP and
-checksum. The generated Cask references that exact versioned URL and checksum.
+Create an immutable GitHub Release tagged `v<version>` and attach the ZIP, DMG,
+checksums, and notarization evidence. The generated Cask references the exact
+versioned ZIP URL and checksum.
 
 Before sharing broadly, install the artifact on a clean teammate Mac and verify
 GitHub sign-in, private-repository discovery, polling, notifications, launch at
