@@ -34,6 +34,15 @@ final class DomainContractTests: XCTestCase {
         XCTAssertEqual(result, [open.id, unknown.id])
     }
 
+    func testPinPolicyKeepsOpenPinnedLookupsInMonitoringSet() {
+        let open = GitPingsFixtures.pullRequest(lifecycle: .open)
+        let merged = GitPingsFixtures.pullRequest(lifecycle: .merged)
+
+        XCTAssertTrue(PinPolicy.shouldMonitorVerifiedLookup(open, isPinned: true))
+        XCTAssertFalse(PinPolicy.shouldMonitorVerifiedLookup(open, isPinned: false))
+        XCTAssertTrue(PinPolicy.shouldMonitorVerifiedLookup(merged, isPinned: false))
+    }
+
     func testMenuBarStatusShowsCIAndMergeStateTogether() {
         let conflicting = GitPingsFixtures.pullRequest(ci: .passing, merge: .conflicting)
         XCTAssertEqual(
@@ -46,6 +55,24 @@ final class DomainContractTests: XCTestCase {
             MenuBarPRStatusFormatter.text(for: blocked),
             "CI pending · Merge blocked"
         )
+    }
+
+    func testMenuBarRecentShowsFiveMostRecentlyUpdatedOpenPullRequests() {
+        let pullRequests = (0..<7).map { index in
+            var pullRequest = GitPingsFixtures.pullRequest(
+                id: "PR_\(index)",
+                number: index,
+                lifecycle: index == 6 ? .merged : .open
+            )
+            pullRequest.updatedAt = GitPingsFixtures.fixedNow.addingTimeInterval(TimeInterval(index))
+            return pullRequest
+        }
+
+        let recent = MenuBarPRCollection.recent(from: pullRequests)
+
+        XCTAssertEqual(recent.count, 5)
+        XCTAssertEqual(recent.map(\.number), [5, 4, 3, 2, 1])
+        XCTAssertFalse(recent.contains { $0.lifecycleState == .merged })
     }
 
     func testMenuBarSeverityAttentionForFailingOrConflict() {

@@ -4,11 +4,12 @@ import SwiftUI
 struct MenuBarPopoverView: View {
     @Bindable var model: AppModel
     @Environment(\.openWindow) private var openWindow
+    @State private var selectedSection: MenuBarSection = .pinned
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Pinned PRs")
+                Text("Pull Requests")
                     .font(.headline)
                 Spacer()
                 if model.isRefreshing {
@@ -16,11 +17,19 @@ struct MenuBarPopoverView: View {
                 }
             }
 
-            if model.pinnedPullRequests.isEmpty {
-                Text("No pins yet")
+            Picker("Pull request list", selection: $selectedSection) {
+                ForEach(MenuBarSection.allCases) { section in
+                    Text(section.title).tag(section)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
+            if displayedPullRequests.isEmpty {
+                Text(selectedSection.emptyMessage)
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(model.pinnedPullRequests) { pr in
+                ForEach(displayedPullRequests) { pr in
                     Button {
                         model.openPullRequest(id: pr.id)
                     } label: {
@@ -88,7 +97,16 @@ struct MenuBarPopoverView: View {
         .frame(width: 360)
         .task { model.start() }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("GitPings pinned pull requests")
+        .accessibilityLabel("GitPings pull requests")
+    }
+
+    private var displayedPullRequests: [PullRequestSummary] {
+        switch selectedSection {
+        case .pinned:
+            model.pinnedPullRequests
+        case .recent:
+            MenuBarPRCollection.recent(from: model.pullRequests)
+        }
     }
 
     private func rowSymbol(for pr: PullRequestSummary) -> String {
@@ -116,6 +134,46 @@ struct MenuBarPopoverView: View {
         return .secondary
     }
 
+}
+
+enum MenuBarSection: String, CaseIterable, Identifiable {
+    case pinned
+    case recent
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .pinned: "Pinned"
+        case .recent: "Recent"
+        }
+    }
+
+    var emptyMessage: String {
+        switch self {
+        case .pinned: "No pins yet"
+        case .recent: "No recent open PRs"
+        }
+    }
+}
+
+enum MenuBarPRCollection {
+    static let recentLimit = 5
+
+    static func recent(from pullRequests: [PullRequestSummary]) -> [PullRequestSummary] {
+        Array(
+            pullRequests
+                .filter { $0.lifecycleState == .open }
+                .sorted { lhs, rhs in
+                    if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt > rhs.updatedAt }
+                    if lhs.repositoryNameWithOwner != rhs.repositoryNameWithOwner {
+                        return lhs.repositoryNameWithOwner < rhs.repositoryNameWithOwner
+                    }
+                    return lhs.number > rhs.number
+                }
+                .prefix(recentLimit)
+        )
+    }
 }
 
 enum MenuBarPRStatusFormatter {
@@ -154,7 +212,7 @@ struct MenuBarStatusLabel: View {
             .symbolRenderingMode(.hierarchical)
             .accessibilityLabel("GitPings")
             .accessibilityValue(accessibilityValue)
-            .accessibilityHint("Opens the pinned pull request menu")
+            .accessibilityHint("Opens the pull request menu")
     }
 
     private var symbolName: String {
