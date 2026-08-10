@@ -14,6 +14,10 @@ onboarding flow.
 
 ## Install and connect
 
+Want an AI agent to guide the installation? Give it
+[AGENT_SETUP.md](AGENT_SETUP.md), which includes a copy-paste prompt, safety
+rules, the complete setup flow, verification commands, and troubleshooting.
+
 After installing GitPings, run:
 
 ```bash
