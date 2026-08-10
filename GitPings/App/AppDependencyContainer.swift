@@ -24,6 +24,8 @@ final class AppModel {
     var errorMessage: String?
     var isRefreshing = false
     var repositorySearch = ""
+    private(set) var authenticationMethod: GitHubAuthenticationMethod
+    private(set) var isChangingAuthenticationMethod = false
 
     var oauthClientID: String {
         didSet { UserDefaults.standard.set(oauthClientID, forKey: Keys.oauthClientID) }
@@ -77,6 +79,17 @@ final class AppModel {
     init(github: LiveGitHubService = LiveGitHubService()) {
         self.github = github
         let defaults = UserDefaults.standard
+        if let rawMethod = defaults.string(forKey: Keys.authenticationMethod),
+           let savedMethod = GitHubAuthenticationMethod(rawValue: rawMethod)
+        {
+            authenticationMethod = savedMethod
+        } else if defaults.string(forKey: Keys.legacyActiveGitHubAccountID) != nil {
+            // Preserve the existing GitHub App session when upgrading from a
+            // version that predates selectable authentication.
+            authenticationMethod = .githubApp
+        } else {
+            authenticationMethod = .githubCLI
+        }
         oauthClientID = ProcessInfo.processInfo.environment["GITPINGS_GITHUB_CLIENT_ID"]
             ?? (Bundle.main.object(forInfoDictionaryKey: "GitHubClientID") as? String)
             ?? GitNotaryConfiguration.clientID
@@ -129,16 +142,40 @@ final class AppModel {
 
     func start(
         beginSignInIfNeeded: Bool = false,
-        expectedGitHubLogin: String? = nil
+        expectedGitHubLogin: String? = nil,
+        preferredAuthenticationMethod: GitHubAuthenticationMethod? = nil
     ) {
         guard !didStart else { return }
         didStart = true
         Task {
             await github.configureOAuthClientID(oauthClientID)
+            await github.configureAuthenticationMethod(authenticationMethod)
             do {
-                if let account = try await github.restoreSession() {
+                if let preferredAuthenticationMethod,
+                   preferredAuthenticationMethod != authenticationMethod
+                {
+                    try await github.signOut()
+                    setAuthenticationMethod(preferredAuthenticationMethod)
+                    await github.configureAuthenticationMethod(preferredAuthenticationMethod)
+                    clearLocalGitHubState(status: "Authentication method changed")
+                }
+
+                let mayRestoreSession = authenticationMethod == .githubApp
+                    || UserDefaults.standard.bool(forKey: Keys.githubCLIConnected)
+                    || beginSignInIfNeeded
+                if mayRestoreSession, let account = try await github.restoreSession() {
+                    if let expectedGitHubLogin,
+                       account.login.caseInsensitiveCompare(expectedGitHubLogin) != .orderedSame
+                    {
+                        throw GitPingsError.reauthorizationRequired(
+                            "GitHub CLI is signed in as @\(account.login), not @\(expectedGitHubLogin). Run ‘gh auth switch’ and try again."
+                        )
+                    }
+                    if authenticationMethod == .githubCLI {
+                        UserDefaults.standard.set(true, forKey: Keys.githubCLIConnected)
+                    }
                     authState = .signedIn(account)
-                    statusMessage = "Signed in as @\(account.login)"
+                    statusMessage = "Connected as @\(account.login) via \(authenticationMethod.displayName)"
                     try await loadRepositoriesAndRefresh()
                     startRefreshLoop()
                 } else if beginSignInIfNeeded {
@@ -158,6 +195,10 @@ final class AppModel {
     func beginSignIn() {
         errorMessage = nil
         authPollingTask?.cancel()
+        if authenticationMethod == .githubCLI {
+            connectGitHubCLI()
+            return
+        }
         authPollingTask = Task {
             await github.configureOAuthClientID(oauthClientID)
             do {
@@ -187,19 +228,31 @@ final class AppModel {
     func signOut() {
         Task {
             do { try await github.signOut() } catch { errorMessage = userFacing(error) }
-            authState = .signedOut
-            repositories = []
-            selectedRepositoryIDs = []
-            pullRequests = []
-            pinnedIDs = []
-            retainedPinnedPullRequests = [:]
-            observedAuthoredPullRequests = [:]
-            authoredPullRequestBaselinePending = true
-            baselinePending = true
-            lastSuccessfulRefreshAt = nil
-            menuBarSeverity = .neutral
-            statusMessage = "Signed out"
-            refreshLoopTask?.cancel()
+            if authenticationMethod == .githubCLI {
+                UserDefaults.standard.set(false, forKey: Keys.githubCLIConnected)
+            }
+            clearLocalGitHubState(status: "Disconnected from GitHub")
+        }
+    }
+
+    func selectAuthenticationMethod(_ method: GitHubAuthenticationMethod) {
+        guard method != authenticationMethod, !isChangingAuthenticationMethod else { return }
+        isChangingAuthenticationMethod = true
+        errorMessage = nil
+        Task {
+            defer { isChangingAuthenticationMethod = false }
+            do {
+                try await github.signOut()
+                UserDefaults.standard.set(false, forKey: Keys.githubCLIConnected)
+                setAuthenticationMethod(method)
+                await github.configureAuthenticationMethod(method)
+                clearLocalGitHubState(status: "Using \(method.displayName)")
+                if method == .githubCLI {
+                    connectGitHubCLI()
+                }
+            } catch {
+                errorMessage = userFacing(error)
+            }
         }
     }
 
@@ -265,6 +318,24 @@ final class AppModel {
         Task { await notchPresenter.present(events: [event]) }
     }
 
+    func sendTestNotchQueue() {
+        let source = Array(pullRequests.prefix(4))
+        let events: [TransitionEvent] = (0..<4).map { index in
+            let pullRequest = source.indices.contains(index) ? source[index] : nil
+            return TransitionEvent(
+                pullRequestID: pullRequest?.id ?? GitHubNodeID("PR_TEST_QUEUE_\(index + 1)"),
+                repositoryNameWithOwner: pullRequest?.repositoryNameWithOwner ?? "gitpings/demo",
+                number: pullRequest?.number ?? index + 1,
+                title: pullRequest?.title ?? "Queued notification \(index + 1)",
+                kind: index.isMultiple(of: 2) ? .ciChanged : .mergeChanged,
+                oldValue: index.isMultiple(of: 2) ? CIState.pending.rawValue : MergeState.checking.rawValue,
+                newValue: index.isMultiple(of: 2) ? CIState.passing.rawValue : MergeState.blocked.rawValue,
+                observedAt: Date()
+            )
+        }
+        Task { await notchPresenter.present(events: events) }
+    }
+
     func openPullRequest(id: GitHubNodeID) {
         guard let url = pullRequests.first(where: { $0.id == id })?.url
             ?? retainedPinnedPullRequests[id]?.url
@@ -287,7 +358,7 @@ final class AppModel {
                     continue
                 case .signedIn(let account):
                     authState = .signedIn(account)
-                    statusMessage = "Signed in as @\(account.login)"
+                    statusMessage = "Connected as @\(account.login) via \(authenticationMethod.displayName)"
                     try await loadRepositoriesAndRefresh()
                     startRefreshLoop()
                     return
@@ -466,6 +537,49 @@ final class AppModel {
         }
     }
 
+    private func connectGitHubCLI() {
+        authPollingTask?.cancel()
+        authPollingTask = Task {
+            await github.configureAuthenticationMethod(.githubCLI)
+            do {
+                guard let account = try await github.restoreSession() else {
+                    throw GitPingsError.notAuthenticated
+                }
+                UserDefaults.standard.set(true, forKey: Keys.githubCLIConnected)
+                authState = .signedIn(account)
+                statusMessage = "Connected as @\(account.login) via Local GitHub CLI"
+                try await loadRepositoriesAndRefresh()
+                startRefreshLoop()
+            } catch {
+                authState = .needsReauthorization(reason: userFacing(error))
+                errorMessage = userFacing(error)
+                statusMessage = "GitHub CLI needs attention"
+            }
+        }
+    }
+
+    private func setAuthenticationMethod(_ method: GitHubAuthenticationMethod) {
+        authenticationMethod = method
+        UserDefaults.standard.set(method.rawValue, forKey: Keys.authenticationMethod)
+    }
+
+    private func clearLocalGitHubState(status: String) {
+        authPollingTask?.cancel()
+        refreshLoopTask?.cancel()
+        authState = .signedOut
+        repositories = []
+        selectedRepositoryIDs = []
+        pullRequests = []
+        pinnedIDs = []
+        retainedPinnedPullRequests = [:]
+        observedAuthoredPullRequests = [:]
+        authoredPullRequestBaselinePending = true
+        baselinePending = true
+        lastSuccessfulRefreshAt = nil
+        menuBarSeverity = .neutral
+        statusMessage = status
+    }
+
     private func updateMenuBarSeverity() {
         menuBarSeverity = MenuBarSeverityCalculator.severity(for: pinnedPullRequests)
     }
@@ -500,6 +614,9 @@ final class AppModel {
     }
 
     private enum Keys {
+        static let authenticationMethod = "GitPings.authenticationMethod"
+        static let githubCLIConnected = "GitPings.githubCLIConnected"
+        static let legacyActiveGitHubAccountID = "GitPings.activeGitHubAccountID"
         static let oauthClientID = "GitPings.oauthClientID"
         static let selectedRepositories = "GitPings.selectedRepositories"
         static let pins = "GitPings.pins"

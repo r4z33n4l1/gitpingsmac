@@ -228,13 +228,30 @@ struct DashboardRootView: View {
                 }
             case .needsReauthorization(let reason):
                 Text(reason).foregroundStyle(.red)
-                Button("Sign in again") { model.beginSignIn() }
+                Button(authenticationActionLabel) { model.beginSignIn() }
                     .buttonStyle(.borderedProminent)
             default:
-                Button("Sign in with GitHub") { model.beginSignIn() }
+                Picker("Authentication", selection: Binding(
+                    get: { model.authenticationMethod },
+                    set: { model.selectAuthenticationMethod($0) }
+                )) {
+                    ForEach(GitHubAuthenticationMethod.allCases) { method in
+                        Text(method.displayName).tag(method)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 390)
+
+                Button(authenticationActionLabel) { model.beginSignIn() }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
-                if model.oauthClientID.isEmpty {
+                if model.authenticationMethod == .githubCLI {
+                    Text("Uses the account from `gh auth login`. GitPings runs read-only `gh api graphql` queries and never exports your GitHub CLI token.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 500)
+                } else if model.oauthClientID.isEmpty {
                     Text("A GitHub OAuth client ID is required for device login. Add it in Settings → Account, or launch with GITPINGS_GITHUB_CLIENT_ID.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -245,6 +262,13 @@ struct DashboardRootView: View {
         }
         .padding(48)
         .frame(minWidth: 720, minHeight: 500)
+    }
+
+    private var authenticationActionLabel: String {
+        switch model.authenticationMethod {
+        case .githubCLI: "Connect GitHub CLI"
+        case .githubApp: "Authorize GitNotary"
+        }
     }
 
     private func ciLabel(_ state: CIState) -> String {

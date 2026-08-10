@@ -17,7 +17,7 @@ The requirements and accepted ADRs are the source of truth. The execution plan c
 
 - Native Swift 6 app targeting macOS Tahoe 26 and newer.
 - One GitHub.com account per local installation.
-- GitHub App OAuth device flow.
+- Selectable Local GitHub CLI and GitHub App OAuth device-flow authentication.
 - Direct Mac-to-GitHub communication only.
 - No Vercel, Convex, callback server, webhooks, APNs backend, or custom API.
 - Read-only GitHub permissions and operations.
@@ -76,7 +76,8 @@ An agent may read broadly but writes only within owned paths.
 - Do not duplicate a source of truth across SwiftUI, AppKit, persistence, and services.
 - Unknown or missing GitHub data never maps to passing or mergeable.
 - Disappearance from an open-PR search never implies closed or merged without a targeted lookup.
-- Tokens belong in Keychain only.
+- GitHub App tokens belong in Keychain only. GitHub CLI tokens remain owned by
+  `gh`; never request, export, copy, print, or persist them in GitPings.
 - Redact tokens, authorization headers, refresh tokens, device codes, cookies, and private payloads from logs and fixtures.
 - Use public macOS APIs only.
 - Keep the AppKit bridge limited to the notch/fallback panel boundary.

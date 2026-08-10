@@ -19,7 +19,8 @@ struct GitPingsApp: App {
                 .task {
                     container.appModel.start(
                         beginSignInIfNeeded: launchOptions.shouldBeginSetup,
-                        expectedGitHubLogin: launchOptions.expectedGitHubLogin
+                        expectedGitHubLogin: launchOptions.expectedGitHubLogin,
+                        preferredAuthenticationMethod: launchOptions.preferredAuthenticationMethod
                     )
                 }
         }

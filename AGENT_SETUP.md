@@ -4,9 +4,10 @@ This document is for an AI agent helping a person install and configure
 GitPings on their Mac. It describes the end-user setup flow, not the maintainer
 release process.
 
-GitPings is a read-only macOS utility that talks directly to GitHub. It does not
+GitPings is a read-only macOS utility that talks directly to GitHub. Its default
+setup uses the GitHub CLI account already authenticated on the Mac. It does not
 need a GitPings server, OAuth callback site, Vercel project, Convex database,
-personal access token, GitHub App private key, or client secret.
+personal access token paste, GitHub App private key, or client secret.
 
 ## Copy-paste prompt for a setup agent
 
@@ -17,10 +18,11 @@ acting. Guide me one step at a time, explain every command that changes my Mac,
 and verify each completed step.
 
 Use the GitHub CLI account already selected on this Mac, but never read, print,
-copy, or import its token. GitPings must complete its own read-only GitHub App
-Device Flow. Hand control back to me for browser authorization or any permission
-prompt. Never ask me to paste a PAT, password, device code, client secret,
-private key, or Apple credential into chat.
+copy, export, or import its token. GitPings should use Local GitHub CLI mode and
+execute read-only `gh api graphql` queries. Hand control back to me for `gh auth
+login`, SSO, browser authorization, or any permission prompt. Never ask me to
+paste a PAT, password, device code, client secret, private key, or Apple
+credential into chat.
 
 Prefer the public Homebrew tap when its Cask is available. Do not bypass
 Gatekeeper, remove quarantine attributes, weaken macOS security, or install an
@@ -84,8 +86,8 @@ If GitHub CLI is not authenticated, ask the user to run:
 gh auth login
 ```
 
-GitHub CLI identifies the expected account only. GitPings performs a separate
-GitHub App authorization and stores its own token in macOS Keychain.
+GitPings uses GitHub CLI as its credential owner and API transport. It never asks
+GitHub CLI to reveal the token.
 
 ### 2. Install GitPings
 
@@ -116,21 +118,16 @@ Run:
 gitnotary setup
 ```
 
-The command verifies the active `gh` login, launches GitPings, and starts the
-public GitNotary GitHub App Device Flow. The agent must hand control to the user
-for the browser authorization step. Do not copy the one-time code into chat or
-retain it in logs.
+The command verifies the active `gh` login, launches GitPings, selects **Local
+GitHub CLI**, and connects that account. GitPings invokes `gh api graphql` and
+consumes only JSON responses. If access to an organization requires SSO or OAuth
+approval, hand control to the user to complete it.
 
-When GitHub asks where to install GitNotary, let the user choose their personal
-account or an approved organization and select the repositories they want the
-app to read. Organization installations may require owner approval.
-
-The public GitHub App is:
-
-- [GitNotary](https://github.com/apps/gitnotary)
-- read-only for repository metadata, contents, pull requests, checks, and commit
-  statuses;
-- configured without webhooks or a GitPings-operated server.
+An optional **GitNotary GitHub App** method is available in Settings → Account
+for users who prefer fine-grained selected-repository permissions. Its device
+flow and installation may require organization approval. Do not switch methods
+without explaining that GitPings clears its private local cache and creates a
+fresh notification baseline.
 
 ### 4. Select repositories in GitPings
 
@@ -138,14 +135,14 @@ After authorization:
 
 1. Open the GitPings dashboard.
 2. Choose **Add Repository**.
-3. Search the repositories available to the GitHub App.
+3. Search the repositories available through the active authentication method.
 4. Add only the repositories the user wants monitored.
 5. Configure the PR filters in Settings.
 6. Pin up to five pull requests for the menu-bar quick view.
 
-The dashboard intentionally shows only selected repositories. GitHub App access
-and GitPings selection are separate: granting a repository to the App makes it
-available, while adding it in GitPings begins monitoring it.
+The dashboard intentionally shows only selected repositories. Provider access
+and GitPings selection are separate: making a repository available through the
+CLI or App allows discovery, while adding it in GitPings begins monitoring it.
 
 ### 5. Verify the installation
 
@@ -164,12 +161,15 @@ Then verify in the UI:
 
 1. GitPings appears in the Dock while its dashboard is open.
 2. A GitPings status item remains in the menu bar while the app is running.
-3. The dashboard lists only repositories selected in GitPings.
-4. A PR row shows repository/number, title, CI state, and merge state.
-5. Clicking a PR opens its GitHub URL in the default browser.
-6. **Settings → Notifications → Send Test Notification** presents the notch
+3. Settings → Account reports the intended authentication method and account.
+4. The dashboard lists only repositories selected in GitPings.
+5. A PR row shows repository/number, title, CI state, and merge state.
+6. Clicking a PR opens its GitHub URL in the default browser.
+7. **Settings → Notifications → Test Notch Notification** presents the notch
    animation on a notched built-in display, or the top-center fallback pill on a
    notchless/external display.
+8. **Test 4-PR Notification Queue** shows one PR at a time and advances through
+   the remaining locally queued alerts.
 
 Do not describe the macOS presentation as ActivityKit or a native Dynamic Island.
 It is a public-API AppKit `NSPanel` hosting SwiftUI and visually attaching to the
@@ -195,17 +195,19 @@ command -v gitnotary
 
 ### No repositories appear
 
-Confirm the GitNotary installation has access to the expected repositories:
+For Local GitHub CLI mode, confirm the CLI can access the expected repository:
 
 ```bash
-open https://github.com/settings/installations
+gh repo view OWNER/REPOSITORY
 ```
 
-After access is approved, reopen GitPings, use **Add Repository**, and refresh.
+For GitHub App mode, confirm the GitNotary installation at
+`https://github.com/settings/installations`. After access is approved, reopen
+GitPings, use **Add Repository**, and refresh.
 
 ### Wrong GitHub account
 
-First select the intended GitHub CLI account, then restart the GitPings flow:
+Select the intended GitHub CLI account, then restart the GitPings flow:
 
 ```bash
 gh auth status
@@ -213,7 +215,8 @@ gh auth switch
 gitnotary setup
 ```
 
-Do not transfer the GitHub CLI token into GitPings.
+Do not transfer the GitHub CLI token into GitPings. The app will invoke `gh`
+using the newly active account.
 
 ### No menu-bar item or notification
 
@@ -243,4 +246,3 @@ A setup agent should finish with a concise report containing:
 - menu-bar/dashboard verification;
 - test notification result and display type; and
 - any remaining approval or troubleshooting action.
-
